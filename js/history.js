@@ -50,6 +50,10 @@ const History = (() => {
         if (entry.daytimeFeeling) {
             parts.push(`самочувствие: ${entry.daytimeFeeling}/5`);
         }
+        if (entry.protocol) {
+            const done = Object.values(entry.protocol).filter(Boolean).length;
+            parts.push(`протокол: ${done}/9`);
+        }
         return parts.join(' • ') || 'Нет данных';
     }
 
@@ -66,6 +70,10 @@ const History = (() => {
         if (entry.disturbances && entry.disturbances.length) lines.push(`Мешало: ${entry.disturbances.join(', ')}`);
         if (entry.yesterdayFactors && entry.yesterdayFactors.length) lines.push(`Факторы: ${entry.yesterdayFactors.join(', ')}`);
         if (entry.daytimeFeeling) lines.push(`Самочувствие: ${entry.daytimeFeeling}/5`);
+        if (entry.protocol) {
+            const done = Object.values(entry.protocol).filter(Boolean).length;
+            lines.push(`Протокол: ${done}/9 выполнено`);
+        }
         return lines.map(l => `<div>${l}</div>`).join('');
     }
 

@@ -20,12 +20,14 @@
             <h1 class="header__title">Sleep Tracker</h1>
             <nav class="header__nav">
                 <button class="tab tab--active" data-tab="form">Сегодня</button>
+                <button class="tab" data-tab="protocol">Протокол</button>
                 <button class="tab" data-tab="history">История</button>
             </nav>
         </header>
 
         <main class="content">
             <section id="form-view" class="view view--active"></section>
+            <section id="protocol-view" class="view"></section>
             <section id="history-view" class="view"></section>
         </main>
 
@@ -34,6 +36,7 @@
 
     <script src="js/db.js"></script>
     <script src="js/form.js"></script>
+    <script src="js/protocol.js"></script>
     <script src="js/history.js"></script>
     <script src="js/app.js"></script>
 </body>

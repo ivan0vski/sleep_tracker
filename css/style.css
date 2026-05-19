@@ -62,11 +62,11 @@ body {
 
 .tab {
     flex: 1;
-    padding: 10px 16px;
+    padding: 10px 12px;
     border: none;
     background: transparent;
     color: var(--text-secondary);
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 500;
     border-radius: var(--radius-sm);
     cursor: pointer;
@@ -405,6 +405,112 @@ input[type="number"]::-webkit-outer-spin-button {
 .toast--visible {
     transform: translateX(-50%) translateY(0);
     opacity: 1;
+}
+
+/* Protocol */
+.protocol-progress {
+    margin-bottom: 16px;
+}
+
+.protocol-progress__bar {
+    height: 6px;
+    background: var(--bg-input);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 6px;
+}
+
+.protocol-progress__fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.protocol-progress__text {
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.protocol-section {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    padding: var(--spacing);
+    margin-bottom: 12px;
+}
+
+.protocol-section__title {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.protocol-check {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 0;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.protocol-check + .protocol-check {
+    border-top: 1px solid var(--bg-input);
+}
+
+.protocol-check__input {
+    display: none;
+}
+
+.protocol-check__box {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--accent);
+    border-radius: 6px;
+    margin-top: 1px;
+    transition: var(--transition);
+    position: relative;
+}
+
+.protocol-check__input:checked + .protocol-check__box {
+    background: var(--accent);
+}
+
+.protocol-check__input:checked + .protocol-check__box::after {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 2px;
+    width: 6px;
+    height: 11px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.protocol-check__label {
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text-primary);
+}
+
+.protocol-check__input:checked ~ .protocol-check__label {
+    color: var(--text-secondary);
+    text-decoration: line-through;
+    text-decoration-color: var(--accent-dim);
+}
+
+.protocol-hint {
+    font-size: 14px;
+    color: var(--text-primary);
+    padding: 10px 0;
+    line-height: 1.5;
+}
+
+.protocol-hint + .protocol-hint {
+    border-top: 1px solid var(--bg-input);
 }
 
 /* Empty state */

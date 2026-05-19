@@ -30,7 +30,9 @@ const App = (() => {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('view--active'));
         document.getElementById(`${tabName}-view`).classList.add('view--active');
 
-        if (tabName === 'history') {
+        if (tabName === 'protocol') {
+            Protocol.render();
+        } else if (tabName === 'history') {
             History.render();
         }
     }
