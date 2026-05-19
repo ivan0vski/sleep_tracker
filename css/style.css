@@ -455,7 +455,15 @@ input[type="number"]::-webkit-outer-spin-button {
     -webkit-tap-highlight-color: transparent;
 }
 
-.protocol-check + .protocol-check {
+.protocol-section__title + .protocol-check,
+.protocol-section__title + .protocol-hint {
+    border-top: none;
+}
+
+.protocol-check + .protocol-check,
+.protocol-check + .protocol-hint,
+.protocol-hint + .protocol-check,
+.protocol-hint + .protocol-hint {
     border-top: 1px solid var(--bg-input);
 }
 
@@ -507,10 +515,6 @@ input[type="number"]::-webkit-outer-spin-button {
     color: var(--text-primary);
     padding: 10px 0;
     line-height: 1.5;
-}
-
-.protocol-hint + .protocol-hint {
-    border-top: 1px solid var(--bg-input);
 }
 
 /* Empty state */
