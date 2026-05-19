@@ -12,29 +12,9 @@ const SleepForm = (() => {
             String(d.getDate()).padStart(2, '0');
     }
 
-    function formatDateDisplay(isoDate) {
-        const [y, m, d] = isoDate.split('-');
-        const months = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
-        return `${parseInt(d)} ${months[parseInt(m) - 1]} ${y}`;
-    }
-
-    function shiftDate(offset) {
-        const d = new Date(currentDate + 'T12:00:00');
-        d.setDate(d.getDate() + offset);
-        currentDate = d.getFullYear() + '-' +
-            String(d.getMonth() + 1).padStart(2, '0') + '-' +
-            String(d.getDate()).padStart(2, '0');
-        render();
-    }
-
     function render() {
         const container = document.getElementById('form-view');
         container.innerHTML = `
-            <div class="date-selector">
-                <button class="date-selector__btn" id="date-prev">&larr;</button>
-                <span class="date-selector__date">${formatDateDisplay(currentDate)}</span>
-                <button class="date-selector__btn" id="date-next">&rarr;</button>
-            </div>
             <div class="card">
                 <div class="card__title">Во сколько лёг в кровать?</div>
                 <input type="time" id="q-bedtime" value="${formState.bedTime || ''}">
@@ -59,6 +39,7 @@ const SleepForm = (() => {
             <div class="card">
                 <div class="card__title">Во сколько проснулся окончательно?</div>
                 <input type="time" id="q-finalwake" value="${formState.finalWakeTime || ''}">
+                <div class="sleep-duration" id="sleep-duration"></div>
             </div>
             <div class="card">
                 <div class="card__title">Во сколько встал с кровати?</div>
@@ -115,12 +96,22 @@ const SleepForm = (() => {
         saveTimer = setTimeout(save, 500);
     }
 
-    function bindEvents() {
-        document.getElementById('date-prev').addEventListener('click', () => shiftDate(-1));
-        document.getElementById('date-next').addEventListener('click', () => shiftDate(1));
+    function updateSleepDuration() {
+        const fallAsleep = document.getElementById('q-fallasleep').value;
+        const finalWake = document.getElementById('q-finalwake').value;
+        const el = document.getElementById('sleep-duration');
+        const dur = calcSleepDuration(fallAsleep, finalWake);
+        el.textContent = dur ? `Сон: ${dur}` : '';
+    }
 
+    function bindEvents() {
         document.querySelectorAll('#form-view input[type="time"], #form-view input[type="number"]').forEach(input => {
-            input.addEventListener('change', scheduleAutoSave);
+            input.addEventListener('change', () => {
+                scheduleAutoSave();
+                if (input.id === 'q-fallasleep' || input.id === 'q-finalwake') {
+                    updateSleepDuration();
+                }
+            });
         });
 
         document.getElementById('rating-quality').addEventListener('click', (e) => {
@@ -211,6 +202,7 @@ const SleepForm = (() => {
             } else {
                 formState = {};
             }
+            updateSleepDuration();
         });
     }
 
@@ -261,15 +253,11 @@ const SleepForm = (() => {
         setTimeout(() => toast.classList.remove('toast--visible'), 2000);
     }
 
-    function getCurrentDate() {
-        return currentDate;
-    }
-
     function setDate(isoDate) {
         currentDate = isoDate;
         formState = {};
         render();
     }
 
-    return { render, getCurrentDate, setDate };
+    return { render, setDate };
 })();

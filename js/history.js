@@ -18,9 +18,7 @@ const History = (() => {
     }
 
     function renderItem(entry) {
-        const dots = [1, 2, 3, 4, 5].map(n =>
-            `<span class="history-item__dot ${n <= (entry.sleepQuality || 0) ? 'history-item__dot--filled' : ''}"></span>`
-        ).join('');
+        const feelingText = entry.daytimeFeeling ? `${entry.daytimeFeeling}/5` : '';
 
         const summary = buildSummary(entry);
 
@@ -28,7 +26,7 @@ const History = (() => {
             <div class="history-item" data-date="${entry.date}">
                 <div class="history-item__header">
                     <span class="history-item__date">${formatDate(entry.date)}</span>
-                    <span class="history-item__quality">${dots}</span>
+                    <span class="history-item__feeling">${feelingText}</span>
                 </div>
                 <div class="history-item__summary">${summary}</div>
                 <div class="history-item__details">
@@ -45,10 +43,10 @@ const History = (() => {
     function buildSummary(entry) {
         const parts = [];
         if (entry.bedTime && entry.finalWakeTime) {
-            parts.push(`${entry.bedTime} → ${entry.finalWakeTime}`);
-        }
-        if (entry.daytimeFeeling) {
-            parts.push(`самочувствие: ${entry.daytimeFeeling}/5`);
+            let timeRange = `${entry.bedTime} → ${entry.finalWakeTime}`;
+            const dur = calcSleepDuration(entry.fallAsleepTime, entry.finalWakeTime);
+            if (dur) timeRange += ` (${dur})`;
+            parts.push(timeRange);
         }
         if (entry.protocol) {
             const done = Object.values(entry.protocol).filter(Boolean).length;
@@ -66,6 +64,8 @@ const History = (() => {
         }
         if (entry.finalWakeTime) lines.push(`Проснулся: ${entry.finalWakeTime}`);
         if (entry.outOfBedTime) lines.push(`Встал: ${entry.outOfBedTime}`);
+        const dur = calcSleepDuration(entry.fallAsleepTime, entry.finalWakeTime);
+        if (dur) lines.push(`Сон: ${dur}`);
         if (entry.sleepQuality) lines.push(`Качество сна: ${entry.sleepQuality}/5`);
         if (entry.disturbances && entry.disturbances.length) lines.push(`Мешало: ${entry.disturbances.join(', ')}`);
         if (entry.yesterdayFactors && entry.yesterdayFactors.length) lines.push(`Факторы: ${entry.yesterdayFactors.join(', ')}`);

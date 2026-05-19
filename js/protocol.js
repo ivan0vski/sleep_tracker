@@ -96,22 +96,6 @@ const Protocol = (() => {
             String(d.getDate()).padStart(2, '0');
     }
 
-    function formatDateDisplay(isoDate) {
-        const [y, m, d] = isoDate.split('-');
-        const months = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
-        return `${parseInt(d)} ${months[parseInt(m) - 1]} ${y}`;
-    }
-
-    function shiftDate(offset) {
-        const d = new Date(currentDate + 'T12:00:00');
-        d.setDate(d.getDate() + offset);
-        currentDate = d.getFullYear() + '-' +
-            String(d.getMonth() + 1).padStart(2, '0') + '-' +
-            String(d.getDate()).padStart(2, '0');
-        protocolState = {};
-        render();
-    }
-
     function getCheckedCount() {
         return ALL_KEYS.filter(key => protocolState[key]).length;
     }
@@ -157,11 +141,6 @@ const Protocol = (() => {
         const total = ALL_KEYS.length;
 
         container.innerHTML = `
-            <div class="date-selector">
-                <button class="date-selector__btn" id="protocol-date-prev">&larr;</button>
-                <span class="date-selector__date">${formatDateDisplay(currentDate)}</span>
-                <button class="date-selector__btn" id="protocol-date-next">&rarr;</button>
-            </div>
             <div class="protocol-progress">
                 <div class="protocol-progress__bar">
                     <div class="protocol-progress__fill" style="width: ${total ? (checked / total * 100) : 0}%"></div>
@@ -177,9 +156,6 @@ const Protocol = (() => {
     }
 
     function bindEvents() {
-        document.getElementById('protocol-date-prev').addEventListener('click', () => shiftDate(-1));
-        document.getElementById('protocol-date-next').addEventListener('click', () => shiftDate(1));
-
         document.querySelectorAll('#protocol-view .protocol-check__input').forEach(input => {
             input.addEventListener('change', () => {
                 protocolState[input.dataset.key] = input.checked;
@@ -224,15 +200,11 @@ const Protocol = (() => {
         });
     }
 
-    function getCurrentDate() {
-        return currentDate;
-    }
-
     function setDate(isoDate) {
         currentDate = isoDate;
         protocolState = {};
         render();
     }
 
-    return { render, getCurrentDate, setDate };
+    return { render, setDate };
 })();
