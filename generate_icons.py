@@ -1,26 +1,48 @@
-"""Generate simple PNG icons for the PWA. Run once: python generate_icons.py"""
+"""Generate anti-aliased PNG icons for the PWA. Run once: python generate_icons.py"""
 import struct
 import zlib
 
-def create_png(width, height, bg_color, circle_color, filename):
-    """Create a minimal PNG with a moon crescent icon."""
-    pixels = []
-    cx, cy = width // 2, height // 2
-    r1 = int(min(width, height) * 0.35)
-    r2 = int(r1 * 0.75)
-    offset_x = int(r1 * 0.3)
+SUPERSAMPLE = 4
 
+def create_png(width, height, bg_color, moon_color, filename):
+    sw = width * SUPERSAMPLE
+    sh = height * SUPERSAMPLE
+    cx, cy = sw // 2, sh // 2
+    r1 = int(min(sw, sh) * 0.35)
+    r2 = int(r1 * 0.75)
+    ox = int(r1 * 0.3)
+    oy = -int(r1 * 0.1)
+    r1_sq = r1 * r1
+    r2_sq = r2 * r2
+
+    hires = []
+    for y in range(sh):
+        row = []
+        dy1 = y - cy
+        dy2 = y - (cy + oy)
+        dy1_sq = dy1 * dy1
+        dy2_sq = dy2 * dy2
+        for x in range(sw):
+            dx1 = x - cx
+            dx2 = x - (cx + ox)
+            in_main = (dx1 * dx1 + dy1_sq) <= r1_sq
+            in_cut = (dx2 * dx2 + dy2_sq) <= r2_sq
+            row.append(1 if in_main and not in_cut else 0)
+        hires.append(row)
+
+    pixels = []
     for y in range(height):
         row = []
         for x in range(width):
-            dx1, dy1 = x - cx, y - cy
-            dx2, dy2 = x - (cx + offset_x), y - (cy - int(r1 * 0.1))
-            in_main = (dx1 * dx1 + dy1 * dy1) <= r1 * r1
-            in_cut = (dx2 * dx2 + dy2 * dy2) <= r2 * r2
-            if in_main and not in_cut:
-                row.extend(circle_color)
-            else:
-                row.extend(bg_color)
+            total = 0
+            for sy in range(SUPERSAMPLE):
+                for sx in range(SUPERSAMPLE):
+                    total += hires[y * SUPERSAMPLE + sy][x * SUPERSAMPLE + sx]
+            alpha = total / (SUPERSAMPLE * SUPERSAMPLE)
+            r = int(bg_color[0] * (1 - alpha) + moon_color[0] * alpha)
+            g = int(bg_color[1] * (1 - alpha) + moon_color[1] * alpha)
+            b = int(bg_color[2] * (1 - alpha) + moon_color[2] * alpha)
+            row.extend([r, g, b])
         pixels.append(bytes([0] + row))
 
     raw = b''.join(pixels)
