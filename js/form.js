@@ -96,7 +96,6 @@ const SleepForm = (() => {
                     ${[1,2,3,4,5].map(n => `<button class="rating__btn ${formState.daytimeFeeling === n ? 'rating__btn--active' : ''}" data-value="${n}">${n}</button>`).join('')}
                 </div>
             </div>
-            <button class="btn-save" id="btn-save">Сохранить</button>
         `;
         bindEvents();
         loadExisting();
@@ -109,9 +108,20 @@ const SleepForm = (() => {
         ).join('');
     }
 
+    let saveTimer = null;
+
+    function scheduleAutoSave() {
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(save, 500);
+    }
+
     function bindEvents() {
         document.getElementById('date-prev').addEventListener('click', () => shiftDate(-1));
         document.getElementById('date-next').addEventListener('click', () => shiftDate(1));
+
+        document.querySelectorAll('#form-view input[type="time"], #form-view input[type="number"]').forEach(input => {
+            input.addEventListener('change', scheduleAutoSave);
+        });
 
         document.getElementById('rating-quality').addEventListener('click', (e) => {
             const btn = e.target.closest('.rating__btn');
@@ -119,6 +129,7 @@ const SleepForm = (() => {
             formState.sleepQuality = parseInt(btn.dataset.value);
             btn.parentElement.querySelectorAll('.rating__btn').forEach(b => b.classList.remove('rating__btn--active'));
             btn.classList.add('rating__btn--active');
+            scheduleAutoSave();
         });
 
         document.getElementById('rating-daytime').addEventListener('click', (e) => {
@@ -127,29 +138,32 @@ const SleepForm = (() => {
             formState.daytimeFeeling = parseInt(btn.dataset.value);
             btn.parentElement.querySelectorAll('.rating__btn').forEach(b => b.classList.remove('rating__btn--active'));
             btn.classList.add('rating__btn--active');
+            scheduleAutoSave();
         });
 
         document.getElementById('tags-disturbances').addEventListener('click', (e) => {
             const tag = e.target.closest('.tag');
             if (!tag) return;
             toggleTag('disturbances', tag.dataset.tag, tag);
+            scheduleAutoSave();
         });
 
         document.getElementById('tags-factors').addEventListener('click', (e) => {
             const tag = e.target.closest('.tag');
             if (!tag) return;
             toggleTag('yesterdayFactors', tag.dataset.tag, tag);
+            scheduleAutoSave();
         });
 
         document.getElementById('add-disturbance').addEventListener('click', () => {
             addCustomTag('disturbances', 'custom-disturbance', 'tags-disturbances', DISTURBANCE_TAGS);
+            scheduleAutoSave();
         });
 
         document.getElementById('add-factor').addEventListener('click', () => {
             addCustomTag('yesterdayFactors', 'custom-factor', 'tags-factors', FACTOR_TAGS);
+            scheduleAutoSave();
         });
-
-        document.getElementById('btn-save').addEventListener('click', save);
     }
 
     function toggleTag(field, tagValue, el) {
@@ -214,24 +228,28 @@ const SleepForm = (() => {
     }
 
     function save() {
-        const entry = {
-            date: currentDate,
-            bedTime: document.getElementById('q-bedtime').value || null,
-            fallAsleepTime: document.getElementById('q-fallasleep').value || null,
-            wakeUps: {
-                count: parseInt(document.getElementById('q-wakeups-count').value) || 0,
-                awakeDuration: parseInt(document.getElementById('q-wakeups-duration').value) || 0
-            },
-            finalWakeTime: document.getElementById('q-finalwake').value || null,
-            outOfBedTime: document.getElementById('q-outofbed').value || null,
-            sleepQuality: formState.sleepQuality || null,
-            disturbances: formState.disturbances || [],
-            yesterdayFactors: formState.yesterdayFactors || [],
-            daytimeFeeling: formState.daytimeFeeling || null,
-            createdAt: Date.now()
-        };
-
-        DB.saveEntry(entry).then(() => {
+        DB.getEntry(currentDate).then(existing => {
+            const entry = {
+                date: currentDate,
+                bedTime: document.getElementById('q-bedtime').value || null,
+                fallAsleepTime: document.getElementById('q-fallasleep').value || null,
+                wakeUps: {
+                    count: parseInt(document.getElementById('q-wakeups-count').value) || 0,
+                    awakeDuration: parseInt(document.getElementById('q-wakeups-duration').value) || 0
+                },
+                finalWakeTime: document.getElementById('q-finalwake').value || null,
+                outOfBedTime: document.getElementById('q-outofbed').value || null,
+                sleepQuality: formState.sleepQuality || null,
+                disturbances: formState.disturbances || [],
+                yesterdayFactors: formState.yesterdayFactors || [],
+                daytimeFeeling: formState.daytimeFeeling || null,
+                createdAt: (existing && existing.createdAt) || Date.now()
+            };
+            if (existing && existing.protocol) {
+                entry.protocol = existing.protocol;
+            }
+            return DB.saveEntry(entry);
+        }).then(() => {
             showToast('Сохранено');
         });
     }
