@@ -241,8 +241,6 @@ const SleepForm = (() => {
                 entry.protocol = existing.protocol;
             }
             return DB.saveEntry(entry);
-        }).then(() => {
-            showToast('Сохранено');
         });
     }
 
