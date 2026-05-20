@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sleep-tracker-v6';
+const CACHE_NAME = 'sleep-tracker-v7';
 const ASSETS = [
     './',
     './index.html',
@@ -7,6 +7,7 @@ const ASSETS = [
     './js/db.js',
     './js/form.js',
     './js/protocol.js',
+    './js/routine.js',
     './js/history.js',
     './manifest.json',
     './icons/icon-192.png',

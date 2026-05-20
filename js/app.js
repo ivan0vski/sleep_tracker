@@ -84,6 +84,8 @@ const App = (() => {
 
         if (tabName === 'protocol') {
             Protocol.render();
+        } else if (tabName === 'routine') {
+            Routine.render();
         } else if (tabName === 'history') {
             History.render();
         }
