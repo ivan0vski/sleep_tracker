@@ -105,7 +105,7 @@ const App = (() => {
             startY = e.touches[0].clientY;
             isDragging = false;
             isLocked = false;
-            viewWidth = window.innerWidth;
+            viewWidth = container.parentElement.offsetWidth;
             baseOffset = currentIndex * viewWidth;
         }, { passive: true });
 
