@@ -167,9 +167,17 @@ const App = (() => {
         }, { passive: true });
     }
 
+    function showVersion() {
+        fetch('./sw.js').then(r => r.text()).then(text => {
+            const m = text.match(/sleep-tracker-(v\d+)/);
+            if (m) document.getElementById('app-version').textContent = m[1];
+        }).catch(() => {});
+    }
+
     function init() {
         registerServiceWorker();
         initTheme();
+        showVersion();
         container = document.getElementById('swipe-container');
         DB.open().then(() => {
             updateDateDisplay();

@@ -72,6 +72,14 @@ body {
     text-align: center;
 }
 
+.app-version {
+    position: absolute;
+    left: 0;
+    font-size: 11px;
+    color: var(--text-secondary);
+    opacity: 0.5;
+}
+
 .theme-toggle {
     position: absolute;
     right: 0;
