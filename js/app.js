@@ -120,13 +120,16 @@ const App = (() => {
                 }
                 if (Math.abs(deltaX) > 10) {
                     isDragging = true;
+                    startX = x;
                     container.classList.add('swipe-container--dragging');
+                    return;
                 }
             }
 
             if (isDragging) {
                 e.preventDefault();
-                let offset = baseOffset - deltaX;
+                const dragDelta = x - startX;
+                let offset = baseOffset - dragDelta;
                 const maxOffset = (TAB_ORDER.length - 1) * viewWidth;
                 offset = Math.max(-viewWidth * 0.15, Math.min(offset, maxOffset + viewWidth * 0.15));
                 container.style.transform = `translateX(-${offset}px)`;
