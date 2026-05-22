@@ -12,6 +12,10 @@ function calcSleepDuration(fallAsleep, finalWake) {
 const App = (() => {
     let currentDate = todayISO();
 
+    const TAB_ORDER = ['form', 'protocol', 'routine', 'history'];
+    let currentIndex = 0;
+    let container = null;
+
     function todayISO() {
         const d = new Date();
         return d.getFullYear() + '-' +
@@ -76,39 +80,76 @@ const App = (() => {
         if (metaTheme) metaTheme.content = theme === 'light' ? '#f0f0f5' : '#1a1a2e';
     }
 
-    function setupEdgeSwipe() {
+    function slideTo(index) {
+        container.style.transform = `translateX(-${index * 25}%)`;
+    }
+
+    function setupSwipe() {
         const EDGE_ZONE = 40;
-        const SWIPE_THRESHOLD = 50;
-        const TAB_ORDER = ['form', 'protocol', 'routine', 'history'];
-        let touchStartX = null;
-        let touchStartY = null;
-        let isEdgeTouch = false;
+        const SNAP_THRESHOLD = 0.3;
+        let startX = null;
+        let startY = null;
+        let isDragging = false;
+        let baseOffset = 0;
+        let viewWidth = 0;
 
         document.addEventListener('touchstart', (e) => {
             const x = e.touches[0].clientX;
-            isEdgeTouch = (x <= EDGE_ZONE || x >= window.innerWidth - EDGE_ZONE);
-            if (isEdgeTouch) {
-                touchStartX = x;
-                touchStartY = e.touches[0].clientY;
+            if (x > EDGE_ZONE && x < window.innerWidth - EDGE_ZONE) return;
+
+            startX = x;
+            startY = e.touches[0].clientY;
+            isDragging = false;
+            viewWidth = window.innerWidth;
+            baseOffset = currentIndex * viewWidth;
+        }, { passive: true });
+
+        document.addEventListener('touchmove', (e) => {
+            if (startX === null) return;
+
+            const x = e.touches[0].clientX;
+            const y = e.touches[0].clientY;
+            const deltaX = x - startX;
+            const deltaY = y - startY;
+
+            if (!isDragging) {
+                if (Math.abs(deltaY) > Math.abs(deltaX)) {
+                    startX = null;
+                    return;
+                }
+                if (Math.abs(deltaX) > 10) {
+                    isDragging = true;
+                    container.classList.add('swipe-container--dragging');
+                }
+            }
+
+            if (isDragging) {
+                let offset = baseOffset - deltaX;
+                const maxOffset = (TAB_ORDER.length - 1) * viewWidth;
+                offset = Math.max(-viewWidth * 0.15, Math.min(offset, maxOffset + viewWidth * 0.15));
+                container.style.transform = `translateX(-${offset}px)`;
             }
         }, { passive: true });
 
         document.addEventListener('touchend', (e) => {
-            if (!isEdgeTouch || touchStartX === null) return;
-            const deltaX = e.changedTouches[0].clientX - touchStartX;
-            const deltaY = e.changedTouches[0].clientY - touchStartY;
-            touchStartX = null;
-            isEdgeTouch = false;
+            if (!isDragging) {
+                startX = null;
+                return;
+            }
 
-            if (Math.abs(deltaX) < SWIPE_THRESHOLD || Math.abs(deltaY) > Math.abs(deltaX)) return;
+            container.classList.remove('swipe-container--dragging');
+            const deltaX = e.changedTouches[0].clientX - startX;
+            startX = null;
+            isDragging = false;
 
-            const currentTab = document.querySelector('.tab--active').dataset.tab;
-            const idx = TAB_ORDER.indexOf(currentTab);
+            const swipeRatio = Math.abs(deltaX) / viewWidth;
 
-            if (deltaX > 0 && idx > 0) {
-                switchTab(TAB_ORDER[idx - 1]);
-            } else if (deltaX < 0 && idx < TAB_ORDER.length - 1) {
-                switchTab(TAB_ORDER[idx + 1]);
+            if (swipeRatio > SNAP_THRESHOLD && deltaX > 0 && currentIndex > 0) {
+                switchTab(TAB_ORDER[currentIndex - 1]);
+            } else if (swipeRatio > SNAP_THRESHOLD && deltaX < 0 && currentIndex < TAB_ORDER.length - 1) {
+                switchTab(TAB_ORDER[currentIndex + 1]);
+            } else {
+                slideTo(currentIndex);
             }
         }, { passive: true });
     }
@@ -116,12 +157,17 @@ const App = (() => {
     function init() {
         registerServiceWorker();
         initTheme();
-        setupEdgeSwipe();
+        container = document.getElementById('swipe-container');
         DB.open().then(() => {
             updateDateDisplay();
             SleepForm.render();
+            Protocol.render();
+            Routine.render();
+            History.render();
             setupTabs();
             setupDateSelector();
+            setupSwipe();
+            slideTo(0);
         });
     }
 
@@ -150,8 +196,8 @@ const App = (() => {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('tab--active'));
         document.querySelector(`[data-tab="${tabName}"]`).classList.add('tab--active');
 
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('view--active'));
-        document.getElementById(`${tabName}-view`).classList.add('view--active');
+        currentIndex = TAB_ORDER.indexOf(tabName);
+        slideTo(currentIndex);
 
         if (tabName === 'protocol') {
             Protocol.render();

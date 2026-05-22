@@ -127,12 +127,25 @@ body {
 }
 
 /* Views */
-.view {
-    display: none;
+.content {
+    overflow: hidden;
 }
 
-.view--active {
-    display: block;
+.swipe-container {
+    display: flex;
+    width: 400%;
+    transition: transform 0.3s ease;
+    will-change: transform;
+}
+
+.swipe-container--dragging {
+    transition: none;
+}
+
+.view {
+    width: 25%;
+    flex-shrink: 0;
+    min-height: 1px;
 }
 
 /* Form Cards */
