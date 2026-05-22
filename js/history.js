@@ -50,7 +50,7 @@ const History = (() => {
         }
         if (entry.protocol) {
             const done = Object.values(entry.protocol).filter(Boolean).length;
-            parts.push(`протокол: ${done}/9`);
+            parts.push(`протокол: ${done}/10`);
         }
         return parts.join(' • ') || 'Нет данных';
     }
@@ -72,7 +72,7 @@ const History = (() => {
         if (entry.daytimeFeeling) lines.push(`Самочувствие: ${entry.daytimeFeeling}/5`);
         if (entry.protocol) {
             const done = Object.values(entry.protocol).filter(Boolean).length;
-            lines.push(`Протокол: ${done}/9 выполнено`);
+            lines.push(`Протокол: ${done}/10 выполнено`);
         }
         return lines.map(l => `<div>${l}</div>`).join('');
     }

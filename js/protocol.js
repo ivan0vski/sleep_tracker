@@ -6,63 +6,53 @@ const Protocol = (() => {
         {
             id: 'morning',
             title: '☀️ Подъём — 6:00',
-            checks: [
-                { key: 'morningLight', label: 'Выход на яркий уличный свет — 10–20 мин в первые 60 мин после подъёма' }
-            ],
-            hints: [
-                'Подъём в 6:00, 7 дней в неделю. Будильник не переносить',
-                'Заполнить утренний трекер'
+            items: [
+                { type: 'hint', text: 'Подъём в 6:00, 7 дней в неделю. Будильник не переносить' },
+                { type: 'check', key: 'morningTracker', label: 'Заполнить утренний трекер' },
+                { type: 'check', key: 'morningLight', label: 'Выход на яркий уличный свет — 10–20 мин в первые 60 мин после подъёма' }
             ]
         },
         {
             id: 'firstHalf',
             title: '🌤 Первая половина дня — 6:30–12:00',
-            checks: [
-                { key: 'caffeineBeforeNoon', label: 'Кофе / чай / шоколад — только до 12:00' }
-            ],
-            hints: [
-                'Максимум естественного света, особенно до 12:00'
+            items: [
+                { type: 'hint', text: 'Максимум естественного света, особенно до 12:00' },
+                { type: 'check', key: 'caffeineBeforeNoon', label: 'Кофе / чай / шоколад — только до 12:00' }
             ]
         },
         {
             id: 'day',
             title: '🕐 День — 12:00–17:00',
-            checks: [
-                { key: 'exerciseBefore17', label: 'Интенсивные тренировки до 17:00' },
-                { key: 'noDaytimeSleep', label: 'Никакого дневного сна' }
-            ],
-            hints: [
-                'Уставать днём максимально сильно',
-                '70–80% дневной нормы воды выпить до 17:00',
-                'Таймер в 15:00 — напоминание, сколько осталось до сна'
+            items: [
+                { type: 'check', key: 'noDaytimeSleep', label: 'Никакого дневного сна' },
+                { type: 'hint', text: 'Таймер в 15:00 — напоминание, сколько осталось до сна' },
+                { type: 'hint', text: '70–80% дневной нормы воды выпить до 17:00' },
+                { type: 'hint', text: 'Уставать днём максимально сильно' },
+                { type: 'check', key: 'exerciseBefore17', label: 'интенсивные тренировки до 17:00' }
             ]
         },
         {
             id: 'evening',
             title: '🏠 Вечер: переход — 17:00–19:15',
-            checks: [
-                { key: 'screensOff', label: 'Экраны выключить к 19:15' },
-                { key: 'lastMeal', label: 'Последний приём пищи не позже 19:40' }
-            ],
-            hints: [
-                'Уведомление 18:25 «ехать домой». В 18:30 — такси. Дома к 19:00',
-                'Не больше 200 мл воды после ужина'
+            items: [
+                { type: 'hint', text: 'Уведомление 18:25 «ехать домой». В 18:30 — такси. Дома к 19:00' },
+                { type: 'check', key: 'screensOff', label: 'Экраны выключить к 19:15' },
+                { type: 'check', key: 'lastMeal', label: 'Последний приём пищи не позже 19:40' },
+                { type: 'hint', text: 'не больше 200 мл воды после ужина' }
             ]
         },
         {
             id: 'bedPrep',
             title: '🌙 Подготовка ко сну — 19:15–21:10',
-            checks: [
-                { key: 'noPhysicalLoad', label: 'Никакой физической нагрузки, умственная — минимум' },
-                { key: 'warmShower', label: 'Тёплый (не горячий) душ' },
-                { key: 'toiletBeforeBed', label: 'Туалет перед укладыванием' }
-            ],
-            hints: [
-                'После 20:00 — приглушённый свет тёплого спектра (1800–2200 K)',
-                'Проветрить комнату, довести до 18,3 °C',
-                'Абсолютная темнота: блэкаут-шторы, заклеить LED техники, убрать свет из коридора',
-                'Тишина, шумоизоляция',
-                'Меньше часа до сна — не пить вообще'
+            items: [
+                { type: 'hint', text: 'После 20:00 — приглушённый свет тёплого спектра (1800–2200 K)' },
+                { type: 'check', key: 'noPhysicalLoad', label: 'Никакой физической нагрузки, умственная — минимум' },
+                { type: 'check', key: 'warmShower', label: 'Тёплый (не горячий) душ' },
+                { type: 'hint', text: 'Проветрить комнату, довести до 18,3 °C' },
+                { type: 'hint', text: 'Абсолютная темнота: блэкаут-шторы, заклеить LED техники, убрать свет из коридора' },
+                { type: 'hint', text: 'Тишина, шумоизоляция' },
+                { type: 'hint', text: 'Меньше часа до сна — не пить вообще' },
+                { type: 'check', key: 'toiletBeforeBed', label: 'Туалет перед укладыванием' }
             ]
         }
     ];
@@ -82,12 +72,12 @@ const Protocol = (() => {
                 'Кровать только для сна. Днём не есть, не смотреть видео в кровати',
                 'Ванная и квартира ночью — только красные тусклые лампы',
                 'Заполнять трекер 14 дней подряд без пропусков',
-                'Если SE < 85% — чек протокол, начать лечение'
+                'Если SE < 85% — чек протокол. начать лечение'
             ]
         }
     ];
 
-    const ALL_KEYS = SECTIONS.flatMap(s => s.checks.map(c => c.key));
+    const ALL_KEYS = SECTIONS.flatMap(s => s.items.filter(i => i.type === 'check').map(i => i.key));
 
     function todayISO() {
         const d = new Date();
@@ -104,23 +94,23 @@ const Protocol = (() => {
         const container = document.getElementById('protocol-view');
 
         const sectionsHTML = SECTIONS.map(section => {
-            const checksHTML = section.checks.map(check => `
-                <label class="protocol-check">
-                    <input type="checkbox" class="protocol-check__input" data-key="${check.key}" ${protocolState[check.key] ? 'checked' : ''}>
-                    <span class="protocol-check__box"></span>
-                    <span class="protocol-check__label">${check.label}</span>
-                </label>
-            `).join('');
-
-            const hintsHTML = section.hints.map(hint =>
-                `<div class="protocol-hint">${hint}</div>`
-            ).join('');
+            const itemsHTML = section.items.map(item => {
+                if (item.type === 'check') {
+                    return `
+                        <label class="protocol-check">
+                            <input type="checkbox" class="protocol-check__input" data-key="${item.key}" ${protocolState[item.key] ? 'checked' : ''}>
+                            <span class="protocol-check__box"></span>
+                            <span class="protocol-check__label">${item.label}</span>
+                        </label>
+                    `;
+                }
+                return `<div class="protocol-hint">${item.text}</div>`;
+            }).join('');
 
             return `
                 <div class="protocol-section">
                     <div class="protocol-section__title">${section.title}</div>
-                    ${checksHTML}
-                    ${hintsHTML}
+                    ${itemsHTML}
                 </div>
             `;
         }).join('');
