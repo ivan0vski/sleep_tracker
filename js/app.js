@@ -80,12 +80,18 @@ const App = (() => {
         if (metaTheme) metaTheme.content = theme === 'light' ? '#f0f0f5' : '#1a1a2e';
     }
 
-    function slideTo(index) {
+    function slideTo(index, instant) {
+        if (instant) {
+            container.classList.add('swipe-container--dragging');
+            container.style.transform = `translateX(-${index * 25}%)`;
+            container.offsetWidth;
+            container.classList.remove('swipe-container--dragging');
+        }
         container.style.transform = `translateX(-${index * 25}%)`;
     }
 
     function setupSwipe() {
-        const SNAP_THRESHOLD = 0.25;
+        const SNAP_THRESHOLD = 0.15;
         const LOCK_ANGLE_TAN = 0.6;
         let startX = null;
         let startY = null;
@@ -203,7 +209,13 @@ const App = (() => {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('tab--active'));
         document.querySelector(`[data-tab="${tabName}"]`).classList.add('tab--active');
 
-        currentIndex = TAB_ORDER.indexOf(tabName);
+        const newIndex = TAB_ORDER.indexOf(tabName);
+        const gap = Math.abs(newIndex - currentIndex);
+        if (gap > 1) {
+            const neighbor = newIndex > currentIndex ? newIndex - 1 : newIndex + 1;
+            slideTo(neighbor, true);
+        }
+        currentIndex = newIndex;
         slideTo(currentIndex);
 
         if (tabName === 'protocol') {
