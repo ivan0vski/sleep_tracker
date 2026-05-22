@@ -76,9 +76,47 @@ const App = (() => {
         if (metaTheme) metaTheme.content = theme === 'light' ? '#f0f0f5' : '#1a1a2e';
     }
 
+    function setupEdgeSwipe() {
+        const EDGE_ZONE = 40;
+        const SWIPE_THRESHOLD = 50;
+        const TAB_ORDER = ['form', 'protocol', 'routine', 'history'];
+        let touchStartX = null;
+        let touchStartY = null;
+        let isEdgeTouch = false;
+
+        document.addEventListener('touchstart', (e) => {
+            const x = e.touches[0].clientX;
+            isEdgeTouch = (x <= EDGE_ZONE || x >= window.innerWidth - EDGE_ZONE);
+            if (isEdgeTouch) {
+                touchStartX = x;
+                touchStartY = e.touches[0].clientY;
+            }
+        }, { passive: true });
+
+        document.addEventListener('touchend', (e) => {
+            if (!isEdgeTouch || touchStartX === null) return;
+            const deltaX = e.changedTouches[0].clientX - touchStartX;
+            const deltaY = e.changedTouches[0].clientY - touchStartY;
+            touchStartX = null;
+            isEdgeTouch = false;
+
+            if (Math.abs(deltaX) < SWIPE_THRESHOLD || Math.abs(deltaY) > Math.abs(deltaX)) return;
+
+            const currentTab = document.querySelector('.tab--active').dataset.tab;
+            const idx = TAB_ORDER.indexOf(currentTab);
+
+            if (deltaX > 0 && idx > 0) {
+                switchTab(TAB_ORDER[idx - 1]);
+            } else if (deltaX < 0 && idx < TAB_ORDER.length - 1) {
+                switchTab(TAB_ORDER[idx + 1]);
+            }
+        }, { passive: true });
+    }
+
     function init() {
         registerServiceWorker();
         initTheme();
+        setupEdgeSwipe();
         DB.open().then(() => {
             updateDateDisplay();
             SleepForm.render();
