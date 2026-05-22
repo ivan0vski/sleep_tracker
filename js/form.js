@@ -1,6 +1,7 @@
 const SleepForm = (() => {
     let currentDate = todayISO();
     let formState = {};
+    let isReadOnly = false;
 
     const DISTURBANCE_TAGS = ['шум', 'свет', 'температура', 'тревога', 'боль', 'партнёр', 'другое'];
     const FACTOR_TAGS = ['кофеин', 'алкоголь', 'спорт', 'экран', 'стресс', 'тяжёлая еда', 'другое'];
@@ -102,6 +103,7 @@ const SleepForm = (() => {
     let saveTimer = null;
 
     function scheduleAutoSave() {
+        if (isReadOnly) return;
         clearTimeout(saveTimer);
         saveTimer = setTimeout(save, 500);
     }
@@ -125,6 +127,7 @@ const SleepForm = (() => {
         });
 
         document.getElementById('rating-quality').addEventListener('click', (e) => {
+            if (isReadOnly) return;
             const btn = e.target.closest('.rating__btn');
             if (!btn) return;
             formState.sleepQuality = parseInt(btn.dataset.value);
@@ -134,6 +137,7 @@ const SleepForm = (() => {
         });
 
         document.getElementById('rating-daytime').addEventListener('click', (e) => {
+            if (isReadOnly) return;
             const btn = e.target.closest('.rating__btn');
             if (!btn) return;
             formState.daytimeFeeling = parseInt(btn.dataset.value);
@@ -144,6 +148,7 @@ const SleepForm = (() => {
         });
 
         document.getElementById('tags-disturbances').addEventListener('click', (e) => {
+            if (isReadOnly) return;
             const tag = e.target.closest('.tag');
             if (!tag) return;
             toggleTag('disturbances', tag.dataset.tag, tag);
@@ -151,6 +156,7 @@ const SleepForm = (() => {
         });
 
         document.getElementById('tags-factors').addEventListener('click', (e) => {
+            if (isReadOnly) return;
             const tag = e.target.closest('.tag');
             if (!tag) return;
             toggleTag('yesterdayFactors', tag.dataset.tag, tag);
@@ -158,11 +164,13 @@ const SleepForm = (() => {
         });
 
         document.getElementById('add-disturbance').addEventListener('click', () => {
+            if (isReadOnly) return;
             addCustomTag('disturbances', 'custom-disturbance', 'tags-disturbances', DISTURBANCE_TAGS);
             scheduleAutoSave();
         });
 
         document.getElementById('add-factor').addEventListener('click', () => {
+            if (isReadOnly) return;
             addCustomTag('yesterdayFactors', 'custom-factor', 'tags-factors', FACTOR_TAGS);
             scheduleAutoSave();
         });
@@ -214,6 +222,44 @@ const SleepForm = (() => {
                 formState = {};
             }
             updateSleepDuration();
+            isReadOnly = !!(entry && entry.closed);
+            applyReadOnlyState();
+        });
+    }
+
+    function applyReadOnlyState() {
+        const container = document.getElementById('form-view');
+        const existingBanner = container.querySelector('.readonly-banner');
+
+        if (isReadOnly) {
+            container.classList.add('form-view--readonly');
+            container.querySelectorAll('input').forEach(i => i.disabled = true);
+            if (!existingBanner) {
+                container.insertAdjacentHTML('afterbegin', `
+                    <div class="readonly-banner">
+                        <span class="readonly-banner__text">День закрыт</span>
+                        <button class="readonly-banner__btn" id="btn-unlock-form">Редактировать</button>
+                    </div>
+                `);
+                container.querySelector('#btn-unlock-form').addEventListener('click', unlockEdit);
+            }
+        } else {
+            container.classList.remove('form-view--readonly');
+            container.querySelectorAll('input').forEach(i => i.disabled = false);
+            if (existingBanner) existingBanner.remove();
+        }
+    }
+
+    function unlockEdit() {
+        DB.getEntry(currentDate).then(entry => {
+            if (entry) {
+                delete entry.closed;
+                delete entry.closedAt;
+                return DB.saveEntry(entry);
+            }
+        }).then(() => {
+            isReadOnly = false;
+            applyReadOnlyState();
         });
     }
 
@@ -326,7 +372,9 @@ const SleepForm = (() => {
             `;
         }
 
-        const statusText = allComplete ? 'Всё заполнено!' : 'Не заполнено:';
+        const statusText = allComplete
+            ? 'Вы всё проверили? День сейчас закроем.'
+            : 'Вы всё проверили? День сейчас закроем. Отмечай невыполненное:';
 
         const overlay = document.createElement('div');
         overlay.className = 'close-day-overlay';
@@ -360,6 +408,8 @@ const SleepForm = (() => {
     }
 
     function closeDay(overlay) {
+        clearTimeout(saveTimer);
+
         overlay.querySelectorAll('.close-day-field__input[data-tracker-key]').forEach(input => {
             if (input.value) {
                 document.getElementById(input.dataset.inputId).value = input.value;
@@ -384,6 +434,14 @@ const SleepForm = (() => {
                 return Protocol.saveChecks(currentDate, newChecks);
             }
         }).then(() => {
+            return DB.getEntry(currentDate);
+        }).then(entry => {
+            if (entry) {
+                entry.closed = true;
+                entry.closedAt = Date.now();
+                return DB.saveEntry(entry);
+            }
+        }).then(() => {
             overlay.remove();
             App.advanceDate();
         });
@@ -392,6 +450,7 @@ const SleepForm = (() => {
     function setDate(isoDate) {
         currentDate = isoDate;
         formState = {};
+        isReadOnly = false;
         render();
     }
 

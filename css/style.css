@@ -729,3 +729,80 @@ input[type="number"]::-webkit-outer-spin-button {
     cursor: pointer;
     touch-action: manipulation;
 }
+
+/* Read-only closed day */
+.readonly-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-card);
+    border: 1px solid var(--accent-dim);
+    border-radius: var(--radius);
+    padding: 12px var(--spacing);
+    margin-bottom: 12px;
+}
+
+.readonly-banner__text {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.readonly-banner__btn {
+    padding: 8px 16px;
+    background: var(--accent);
+    border: none;
+    border-radius: var(--radius-sm);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: var(--transition);
+}
+
+.readonly-banner__btn:active {
+    transform: scale(0.97);
+    opacity: 0.9;
+}
+
+[data-theme="light"] .readonly-banner {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.form-view--readonly .card {
+    opacity: 0.7;
+}
+
+.form-view--readonly input,
+.form-view--readonly .rating__btn,
+.form-view--readonly .tag {
+    pointer-events: none;
+    cursor: default;
+}
+
+.form-view--readonly .tag-custom {
+    display: none;
+}
+
+.protocol-view--readonly .protocol-section {
+    opacity: 0.7;
+}
+
+.protocol-view--readonly .protocol-check {
+    pointer-events: none;
+    cursor: default;
+}
+
+.protocol-view--readonly .protocol-check__box {
+    opacity: 0.6;
+}
+
+.history-item__closed {
+    font-size: 11px;
+    color: var(--text-secondary);
+    background: var(--bg-input);
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: 8px;
+}

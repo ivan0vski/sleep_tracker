@@ -1,6 +1,7 @@
 const Protocol = (() => {
     let currentDate = todayISO();
     let protocolState = {};
+    let isReadOnly = false;
 
     const SECTIONS = [
         {
@@ -148,6 +149,10 @@ const Protocol = (() => {
     function bindEvents() {
         document.querySelectorAll('#protocol-view .protocol-check__input').forEach(input => {
             input.addEventListener('change', () => {
+                if (isReadOnly) {
+                    input.checked = !input.checked;
+                    return;
+                }
                 protocolState[input.dataset.key] = input.checked;
                 updateProgress();
                 saveProtocol();
@@ -176,6 +181,44 @@ const Protocol = (() => {
             } else {
                 protocolState = {};
             }
+            isReadOnly = !!(entry && entry.closed);
+            applyReadOnlyState();
+        });
+    }
+
+    function applyReadOnlyState() {
+        const container = document.getElementById('protocol-view');
+        const existingBanner = container.querySelector('.readonly-banner');
+
+        if (isReadOnly) {
+            container.classList.add('protocol-view--readonly');
+            container.querySelectorAll('.protocol-check__input').forEach(i => i.disabled = true);
+            if (!existingBanner) {
+                container.insertAdjacentHTML('afterbegin', `
+                    <div class="readonly-banner">
+                        <span class="readonly-banner__text">День закрыт</span>
+                        <button class="readonly-banner__btn" id="btn-unlock-protocol">Редактировать</button>
+                    </div>
+                `);
+                container.querySelector('#btn-unlock-protocol').addEventListener('click', unlockEdit);
+            }
+        } else {
+            container.classList.remove('protocol-view--readonly');
+            container.querySelectorAll('.protocol-check__input').forEach(i => i.disabled = false);
+            if (existingBanner) existingBanner.remove();
+        }
+    }
+
+    function unlockEdit() {
+        DB.getEntry(currentDate).then(entry => {
+            if (entry) {
+                delete entry.closed;
+                delete entry.closedAt;
+                return DB.saveEntry(entry);
+            }
+        }).then(() => {
+            isReadOnly = false;
+            applyReadOnlyState();
         });
     }
 
@@ -193,6 +236,7 @@ const Protocol = (() => {
     function setDate(isoDate) {
         currentDate = isoDate;
         protocolState = {};
+        isReadOnly = false;
         render();
     }
 

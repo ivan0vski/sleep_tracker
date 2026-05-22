@@ -25,7 +25,7 @@ const History = (() => {
         return `
             <div class="history-item" data-date="${entry.date}">
                 <div class="history-item__header">
-                    <span class="history-item__date">${formatDate(entry.date)}</span>
+                    <span class="history-item__date">${formatDate(entry.date)}${entry.closed ? '<span class="history-item__closed">закрыт</span>' : ''}</span>
                     <span class="history-item__feeling">${feelingText}</span>
                 </div>
                 <div class="history-item__summary">${summary}</div>
