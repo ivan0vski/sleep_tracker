@@ -609,3 +609,123 @@ input[type="number"]::-webkit-outer-spin-button {
 .empty-state__text {
     font-size: 15px;
 }
+
+/* Close Day Modal */
+.close-day-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.close-day-modal {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    padding: 24px var(--spacing);
+    max-width: 400px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.close-day-modal__title {
+    font-size: 20px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 12px;
+}
+
+.close-day-modal__status {
+    text-align: center;
+    font-size: 15px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+}
+
+.close-day-modal__status--ok {
+    color: var(--success);
+    font-weight: 600;
+}
+
+.close-day-section {
+    margin-bottom: 16px;
+}
+
+.close-day-section__title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+}
+
+.close-day-field {
+    margin-bottom: 12px;
+}
+
+.close-day-field__label {
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.close-day-field__input {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--bg-input);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 16px;
+    font-family: inherit;
+    outline: none;
+    -webkit-appearance: none;
+}
+
+.close-day-field__input:focus {
+    border-color: var(--accent);
+}
+
+.close-day-modal__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 20px;
+}
+
+.btn-close-day {
+    width: 100%;
+    padding: 14px;
+    background: var(--success);
+    border: none;
+    border-radius: var(--radius);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.btn-close-day:active {
+    opacity: 0.9;
+    transform: scale(0.98);
+}
+
+.btn-later {
+    width: 100%;
+    padding: 12px;
+    background: transparent;
+    border: 1px solid var(--bg-input);
+    border-radius: var(--radius);
+    color: var(--text-secondary);
+    font-size: 15px;
+    cursor: pointer;
+    touch-action: manipulation;
+}

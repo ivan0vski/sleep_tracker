@@ -196,5 +196,26 @@ const Protocol = (() => {
         render();
     }
 
-    return { render, setDate };
+    function getIncomplete(date) {
+        return DB.getEntry(date).then(entry => {
+            const protocol = (entry && entry.protocol) || {};
+            return SECTIONS.flatMap(s =>
+                s.items.filter(i => i.type === 'check' && !protocol[i.key])
+                    .map(i => ({ key: i.key, label: i.label }))
+            );
+        });
+    }
+
+    function saveChecks(date, checks) {
+        return DB.getEntry(date).then(entry => {
+            const data = entry || { date, createdAt: Date.now() };
+            data.protocol = data.protocol || {};
+            Object.keys(checks).forEach(key => {
+                data.protocol[key] = checks[key];
+            });
+            return DB.saveEntry(data);
+        });
+    }
+
+    return { render, setDate, getIncomplete, saveChecks };
 })();

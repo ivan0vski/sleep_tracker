@@ -126,5 +126,9 @@ const App = (() => {
 
     document.addEventListener('DOMContentLoaded', init);
 
-    return { switchTab, getCurrentDate };
+    function advanceDate() {
+        shiftDate(1);
+    }
+
+    return { switchTab, getCurrentDate, advanceDate };
 })();
