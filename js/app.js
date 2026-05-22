@@ -85,27 +85,26 @@ const App = (() => {
     }
 
     function setupSwipe() {
-        const EDGE_ZONE = 40;
-        const SNAP_THRESHOLD = 0.3;
+        const SNAP_THRESHOLD = 0.25;
+        const LOCK_ANGLE_TAN = 0.6;
         let startX = null;
         let startY = null;
         let isDragging = false;
+        let isLocked = false;
         let baseOffset = 0;
         let viewWidth = 0;
 
         document.addEventListener('touchstart', (e) => {
-            const x = e.touches[0].clientX;
-            if (x > EDGE_ZONE && x < window.innerWidth - EDGE_ZONE) return;
-
-            startX = x;
+            startX = e.touches[0].clientX;
             startY = e.touches[0].clientY;
             isDragging = false;
+            isLocked = false;
             viewWidth = window.innerWidth;
             baseOffset = currentIndex * viewWidth;
         }, { passive: true });
 
         document.addEventListener('touchmove', (e) => {
-            if (startX === null) return;
+            if (startX === null || isLocked) return;
 
             const x = e.touches[0].clientX;
             const y = e.touches[0].clientY;
@@ -113,7 +112,9 @@ const App = (() => {
             const deltaY = y - startY;
 
             if (!isDragging) {
-                if (Math.abs(deltaY) > Math.abs(deltaX)) {
+                if (Math.abs(deltaX) < 10 && Math.abs(deltaY) < 10) return;
+                if (Math.abs(deltaY) > Math.abs(deltaX) * LOCK_ANGLE_TAN && Math.abs(deltaY) > 10) {
+                    isLocked = true;
                     startX = null;
                     return;
                 }
@@ -124,16 +125,18 @@ const App = (() => {
             }
 
             if (isDragging) {
+                e.preventDefault();
                 let offset = baseOffset - deltaX;
                 const maxOffset = (TAB_ORDER.length - 1) * viewWidth;
                 offset = Math.max(-viewWidth * 0.15, Math.min(offset, maxOffset + viewWidth * 0.15));
                 container.style.transform = `translateX(-${offset}px)`;
             }
-        }, { passive: true });
+        }, { passive: false });
 
         document.addEventListener('touchend', (e) => {
             if (!isDragging) {
                 startX = null;
+                isLocked = false;
                 return;
             }
 
@@ -141,6 +144,7 @@ const App = (() => {
             const deltaX = e.changedTouches[0].clientX - startX;
             startX = null;
             isDragging = false;
+            isLocked = false;
 
             const swipeRatio = Math.abs(deltaX) / viewWidth;
 
