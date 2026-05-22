@@ -8,6 +8,8 @@ const SleepForm = (() => {
     const TRACKER_FIELDS = [
         { key: 'bedTime', label: 'Во сколько лёг в кровать', inputId: 'q-bedtime', type: 'time' },
         { key: 'fallAsleepTime', label: 'Во сколько заснул', inputId: 'q-fallasleep', type: 'time' },
+        { key: 'wakeUpsCount', label: 'Просыпался — сколько раз', inputId: 'q-wakeups-count', type: 'number' },
+        { key: 'wakeUpsDuration', label: 'Просыпался — минут без сна', inputId: 'q-wakeups-duration', type: 'number' },
         { key: 'finalWakeTime', label: 'Во сколько проснулся', inputId: 'q-finalwake', type: 'time' },
         { key: 'outOfBedTime', label: 'Во сколько встал', inputId: 'q-outofbed', type: 'time' },
         { key: 'sleepQuality', label: 'Качество сна', type: 'rating' }
@@ -265,8 +267,8 @@ const SleepForm = (() => {
         if (existing) existing.remove();
 
         const missingTracker = TRACKER_FIELDS.filter(f => {
-            if (f.type === 'time') return !document.getElementById(f.inputId).value;
-            if (f.key === 'sleepQuality') return !formState.sleepQuality;
+            if (f.inputId) return !document.getElementById(f.inputId).value;
+            if (f.type === 'rating') return !formState[f.key];
             return false;
         });
 
@@ -281,10 +283,10 @@ const SleepForm = (() => {
         let trackerHTML = '';
         if (missingTracker.length > 0) {
             const fieldsHTML = missingTracker.map(f => {
-                if (f.type === 'time') {
+                if (f.type === 'time' || f.type === 'number') {
                     return `<div class="close-day-field">
                         <div class="close-day-field__label">${f.label}</div>
-                        <input type="time" class="close-day-field__input" data-tracker-key="${f.key}" data-input-id="${f.inputId}">
+                        <input type="${f.type}" class="close-day-field__input" data-tracker-key="${f.key}" data-input-id="${f.inputId}" ${f.type === 'number' ? 'min="0"' : ''}>
                     </div>`;
                 }
                 if (f.type === 'rating') {
