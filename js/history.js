@@ -42,8 +42,8 @@ const History = (() => {
 
     function buildSummary(entry) {
         const parts = [];
-        if (entry.bedTime && entry.finalWakeTime) {
-            let timeRange = `${entry.bedTime} → ${entry.finalWakeTime}`;
+        if (entry.fallAsleepTime && entry.finalWakeTime) {
+            let timeRange = `${entry.fallAsleepTime} → ${entry.finalWakeTime}`;
             const dur = calcSleepDuration(entry.fallAsleepTime, entry.finalWakeTime);
             if (dur) timeRange += ` (${dur})`;
             parts.push(timeRange);
@@ -97,7 +97,7 @@ const History = (() => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const date = btn.dataset.date;
-                SleepForm.setDate(date);
+                App.setDate(date);
                 App.switchTab('form');
             });
         });

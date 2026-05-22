@@ -130,5 +130,12 @@ const App = (() => {
         shiftDate(1);
     }
 
-    return { switchTab, getCurrentDate, advanceDate };
+    function setDate(isoDate) {
+        currentDate = isoDate;
+        updateDateDisplay();
+        SleepForm.setDate(currentDate);
+        Protocol.setDate(currentDate);
+    }
+
+    return { switchTab, getCurrentDate, advanceDate, setDate };
 })();

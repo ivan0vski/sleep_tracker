@@ -88,6 +88,7 @@ const SleepForm = (() => {
                     ${[1,2,3,4,5].map(n => `<button class="rating__btn ${formState.daytimeFeeling === n ? 'rating__btn--active' : ''}" data-value="${n}">${n}</button>`).join('')}
                 </div>
             </div>
+            <button class="btn-close-day-main" id="btn-close-day-main">Закрыть день</button>
         `;
         bindEvents();
         loadExisting();
@@ -143,6 +144,11 @@ const SleepForm = (() => {
             formState.daytimeFeeling = parseInt(btn.dataset.value);
             btn.parentElement.querySelectorAll('.rating__btn').forEach(b => b.classList.remove('rating__btn--active'));
             btn.classList.add('rating__btn--active');
+            scheduleAutoSave();
+        });
+
+        document.getElementById('btn-close-day-main').addEventListener('click', () => {
+            if (isReadOnly) return;
             clearTimeout(saveTimer);
             save().then(() => showCloseDayModal());
         });
@@ -386,7 +392,7 @@ const SleepForm = (() => {
                 ${protocolHTML}
                 <div class="close-day-modal__actions">
                     <button class="btn-close-day">Закрыть день</button>
-                    <button class="btn-later">Позже</button>
+                    <button class="btn-later">Отмена</button>
                 </div>
             </div>
         `;
@@ -444,6 +450,7 @@ const SleepForm = (() => {
         }).then(() => {
             overlay.remove();
             App.advanceDate();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         });
     }
 
