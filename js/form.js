@@ -65,7 +65,7 @@ const SleepForm = (() => {
             <div class="card">
                 <div class="card__title">Что мешало спать?</div>
                 <div class="tags" id="tags-disturbances">
-                    ${renderTags(DISTURBANCE_TAGS, formState.disturbances || [])}
+                    ${renderTags(DISTURBANCE_TAGS, formState.disturbances || [], formState.customDisturbances)}
                 </div>
                 <div class="tag-custom">
                     <input type="text" class="tag-custom__input" id="custom-disturbance" placeholder="Своё...">
@@ -75,7 +75,7 @@ const SleepForm = (() => {
             <div class="card">
                 <div class="card__title">Вчера: кофеин / нагрузка / факторы</div>
                 <div class="tags" id="tags-factors">
-                    ${renderTags(FACTOR_TAGS, formState.yesterdayFactors || [])}
+                    ${renderTags(FACTOR_TAGS, formState.yesterdayFactors || [], formState.customFactors)}
                 </div>
                 <div class="tag-custom">
                     <input type="text" class="tag-custom__input" id="custom-factor" placeholder="Своё...">
@@ -94,8 +94,9 @@ const SleepForm = (() => {
         loadExisting();
     }
 
-    function renderTags(predefined, active) {
-        const allTags = [...new Set([...predefined, ...active])];
+    function renderTags(predefined, active, customs) {
+        customs = customs || [];
+        const allTags = [...new Set([...predefined, ...customs])];
         return allTags.map(tag =>
             `<span class="tag ${active.includes(tag) ? 'tag--active' : ''}" data-tag="${tag}">${tag}</span>`
         ).join('');
@@ -171,13 +172,13 @@ const SleepForm = (() => {
 
         document.getElementById('add-disturbance').addEventListener('click', () => {
             if (isReadOnly) return;
-            addCustomTag('disturbances', 'custom-disturbance', 'tags-disturbances', DISTURBANCE_TAGS);
+            addCustomTag('disturbances', 'customDisturbances', 'custom-disturbance', 'tags-disturbances', DISTURBANCE_TAGS);
             scheduleAutoSave();
         });
 
         document.getElementById('add-factor').addEventListener('click', () => {
             if (isReadOnly) return;
-            addCustomTag('yesterdayFactors', 'custom-factor', 'tags-factors', FACTOR_TAGS);
+            addCustomTag('yesterdayFactors', 'customFactors', 'custom-factor', 'tags-factors', FACTOR_TAGS);
             scheduleAutoSave();
         });
     }
@@ -194,20 +195,21 @@ const SleepForm = (() => {
         }
     }
 
-    function addCustomTag(field, inputId, containerId, predefined) {
+    function addCustomTag(field, customField, inputId, containerId, predefined) {
         const input = document.getElementById(inputId);
         const value = input.value.trim().toLowerCase();
         if (!value) return;
+        if (!formState[customField]) formState[customField] = [];
+        if (!formState[customField].includes(value)) {
+            formState[customField].push(value);
+        }
         if (!formState[field]) formState[field] = [];
         if (!formState[field].includes(value)) {
             formState[field].push(value);
         }
         input.value = '';
         const container = document.getElementById(containerId);
-        container.innerHTML = renderTags(predefined, formState[field]);
-        container.querySelectorAll('.tag').forEach(el => {
-            el.addEventListener('click', () => toggleTag(field, el.dataset.tag, el));
-        });
+        container.innerHTML = renderTags(predefined, formState[field], formState[customField]);
     }
 
     function loadExisting() {
@@ -222,8 +224,8 @@ const SleepForm = (() => {
                 document.getElementById('q-outofbed').value = entry.outOfBedTime || '';
                 updateRating('rating-quality', entry.sleepQuality);
                 updateRating('rating-daytime', entry.daytimeFeeling);
-                updateTags('tags-disturbances', DISTURBANCE_TAGS, entry.disturbances || []);
-                updateTags('tags-factors', FACTOR_TAGS, entry.yesterdayFactors || []);
+                updateTags('tags-disturbances', DISTURBANCE_TAGS, entry.disturbances || [], entry.customDisturbances || []);
+                updateTags('tags-factors', FACTOR_TAGS, entry.yesterdayFactors || [], entry.customFactors || []);
             } else {
                 formState = {};
             }
@@ -277,9 +279,9 @@ const SleepForm = (() => {
         });
     }
 
-    function updateTags(containerId, predefined, active) {
+    function updateTags(containerId, predefined, active, customs) {
         const container = document.getElementById(containerId);
-        container.innerHTML = renderTags(predefined, active);
+        container.innerHTML = renderTags(predefined, active, customs);
     }
 
     function save() {
@@ -296,7 +298,9 @@ const SleepForm = (() => {
                 outOfBedTime: document.getElementById('q-outofbed').value || null,
                 sleepQuality: formState.sleepQuality || null,
                 disturbances: formState.disturbances || [],
+                customDisturbances: formState.customDisturbances || [],
                 yesterdayFactors: formState.yesterdayFactors || [],
+                customFactors: formState.customFactors || [],
                 daytimeFeeling: formState.daytimeFeeling || null,
                 createdAt: (existing && existing.createdAt) || Date.now()
             };
