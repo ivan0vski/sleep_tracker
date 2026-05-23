@@ -44,6 +44,11 @@ body {
     padding-right: env(safe-area-inset-right);
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
+    scrollbar-width: none;
+}
+
+body::-webkit-scrollbar {
+    display: none;
 }
 
 .app {

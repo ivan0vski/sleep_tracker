@@ -147,7 +147,7 @@ const App = (() => {
     }
 
     function setupSwipe() {
-        const SNAP_THRESHOLD = 0.15;
+        const SNAP_THRESHOLD = 0.075;
         const LOCK_ANGLE_TAN = 0.6;
         let startX = null;
         let startY = null;
@@ -156,6 +156,7 @@ const App = (() => {
         let baseOffset = 0;
         let viewWidth = 0;
         let dragHeights = [];
+        let dragScrollY = 0;
 
         document.addEventListener('touchstart', (e) => {
             startX = e.touches[0].clientX;
@@ -184,6 +185,7 @@ const App = (() => {
                 if (Math.abs(deltaX) > 10) {
                     isDragging = true;
                     startX = x;
+                    dragScrollY = window.scrollY;
                     if (animationId) {
                         cancelAnimationFrame(animationId);
                         animating = false;
@@ -197,6 +199,7 @@ const App = (() => {
 
             if (isDragging) {
                 e.preventDefault();
+                window.scrollTo(0, dragScrollY);
                 const dragDelta = x - startX;
                 let offset = baseOffset - dragDelta;
                 const maxOffset = (TAB_ORDER.length - 1) * viewWidth;

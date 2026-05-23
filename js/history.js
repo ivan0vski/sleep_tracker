@@ -56,10 +56,6 @@ const History = (() => {
             if (dur) timeRange += ` (${dur})`;
             parts.push(timeRange);
         }
-        if (entry.protocol) {
-            const done = Object.values(entry.protocol).filter(Boolean).length;
-            parts.push(`протокол: ${done}/10`);
-        }
         return parts.join(' • ') || 'Нет данных';
     }
 
