@@ -202,6 +202,15 @@ const App = (() => {
     function setupDateSelector() {
         document.getElementById('date-prev').addEventListener('click', () => shiftDate(-1));
         document.getElementById('date-next').addEventListener('click', () => shiftDate(1));
+
+        const picker = document.getElementById('date-picker');
+        document.getElementById('date-display').addEventListener('click', () => {
+            picker.value = currentDate;
+            picker.showPicker();
+        });
+        picker.addEventListener('change', () => {
+            if (picker.value) setDate(picker.value);
+        });
     }
 
     function setupTabs() {

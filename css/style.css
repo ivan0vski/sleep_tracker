@@ -370,6 +370,17 @@ input[type="number"]::-webkit-outer-spin-button {
 .date-selector__date {
     font-size: 16px;
     font-weight: 500;
+    cursor: pointer;
+    border-bottom: 1px dashed var(--text-secondary);
+    padding-bottom: 2px;
+}
+
+#date-picker {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
 }
 
 /* History */
