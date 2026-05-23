@@ -50,6 +50,7 @@ const App = (() => {
         updateDateDisplay();
         SleepForm.setDate(currentDate);
         Protocol.setDate(currentDate);
+        container.querySelectorAll('.view').forEach(v => v.scrollTop = 0);
     }
 
     function initTheme() {
@@ -257,6 +258,7 @@ const App = (() => {
         updateDateDisplay();
         SleepForm.setDate(currentDate);
         Protocol.setDate(currentDate);
+        container.querySelectorAll('.view').forEach(v => v.scrollTop = 0);
     }
 
     return { switchTab, advanceDate, setDate };
