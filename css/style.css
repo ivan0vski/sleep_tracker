@@ -167,7 +167,7 @@ body {
 .swipe-container {
     display: flex;
     width: 400%;
-    transition: transform 0.3s ease, height 0.3s ease;
+    transition: transform 0.3s ease;
     will-change: transform;
     align-items: flex-start;
 }

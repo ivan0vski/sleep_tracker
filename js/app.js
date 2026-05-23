@@ -15,6 +15,8 @@ const App = (() => {
     const TAB_ORDER = ['form', 'protocol', 'routine', 'history'];
     let currentIndex = 0;
     let container = null;
+    let animating = false;
+    let animationId = null;
 
     function todayISO() {
         const d = new Date();
@@ -99,11 +101,43 @@ const App = (() => {
     }
 
     function updateContainerHeight() {
+        if (animating) return;
         const views = container.querySelectorAll('.view');
         const activeView = views[currentIndex];
         if (activeView) {
             container.style.height = activeView.offsetHeight + 'px';
         }
+    }
+
+    function animateToTop(targetHeight) {
+        if (animationId) cancelAnimationFrame(animationId);
+        const startHeight = parseFloat(container.style.height) || targetHeight;
+        const startScroll = window.scrollY;
+        if (startScroll === 0 && Math.abs(startHeight - targetHeight) < 1) {
+            container.style.height = targetHeight + 'px';
+            return;
+        }
+        const startTime = performance.now();
+        const duration = 300;
+        animating = true;
+
+        function ease(t) {
+            return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+        }
+
+        function tick(now) {
+            const t = Math.min((now - startTime) / duration, 1);
+            const e = ease(t);
+            container.style.height = (startHeight + (targetHeight - startHeight) * e) + 'px';
+            window.scrollTo(0, Math.round(startScroll * (1 - e)));
+            if (t < 1) {
+                animationId = requestAnimationFrame(tick);
+            } else {
+                animating = false;
+                animationId = null;
+            }
+        }
+        animationId = requestAnimationFrame(tick);
     }
 
     function setupHeightObserver() {
@@ -121,6 +155,7 @@ const App = (() => {
         let isLocked = false;
         let baseOffset = 0;
         let viewWidth = 0;
+        let dragHeights = [];
 
         document.addEventListener('touchstart', (e) => {
             startX = e.touches[0].clientX;
@@ -149,6 +184,12 @@ const App = (() => {
                 if (Math.abs(deltaX) > 10) {
                     isDragging = true;
                     startX = x;
+                    if (animationId) {
+                        cancelAnimationFrame(animationId);
+                        animating = false;
+                        animationId = null;
+                    }
+                    dragHeights = Array.from(container.querySelectorAll('.view')).map(v => v.offsetHeight);
                     container.classList.add('swipe-container--dragging');
                     return;
                 }
@@ -161,6 +202,11 @@ const App = (() => {
                 const maxOffset = (TAB_ORDER.length - 1) * viewWidth;
                 offset = Math.max(-viewWidth * 0.15, Math.min(offset, maxOffset + viewWidth * 0.15));
                 container.style.transform = `translateX(-${offset}px)`;
+
+                const neighborIdx = dragDelta > 0 ? currentIndex - 1 : currentIndex + 1;
+                if (neighborIdx >= 0 && neighborIdx < dragHeights.length) {
+                    container.style.height = Math.max(dragHeights[currentIndex], dragHeights[neighborIdx]) + 'px';
+                }
             }
         }, { passive: false });
 
@@ -253,8 +299,6 @@ const App = (() => {
     }
 
     function switchTab(tabName) {
-        window.scrollTo({ top: 0 });
-
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('tab--active'));
         document.querySelector(`[data-tab="${tabName}"]`).classList.add('tab--active');
 
@@ -266,7 +310,9 @@ const App = (() => {
         }
         currentIndex = newIndex;
         slideTo(currentIndex);
-        updateContainerHeight();
+
+        const views = container.querySelectorAll('.view');
+        animateToTop(views[currentIndex].offsetHeight);
 
         if (tabName === 'protocol') {
             Protocol.render();
