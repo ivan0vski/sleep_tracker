@@ -31,10 +31,12 @@ const SleepForm = (() => {
             <div class="card">
                 <div class="card__title">Во сколько лёг в кровать?</div>
                 <input type="time" id="q-bedtime" value="${formState.bedTime || ''}">
+                <div class="time-date-hint" id="hint-bedtime"></div>
             </div>
             <div class="card">
                 <div class="card__title">Во сколько примерно заснул?</div>
                 <input type="time" id="q-fallasleep" value="${formState.fallAsleepTime || ''}">
+                <div class="time-date-hint" id="hint-fallasleep"></div>
                 <div class="quick-time" id="quick-time">
                     <span class="quick-time__label">Через</span>
                     <button class="quick-time__btn" data-offset="10">10</button>
@@ -116,6 +118,28 @@ const SleepForm = (() => {
         ).join('');
     }
 
+    function shiftDateISO(isoDate, offset) {
+        const d = new Date(isoDate + 'T12:00:00');
+        d.setDate(d.getDate() + offset);
+        return d.getFullYear() + '-' +
+            String(d.getMonth() + 1).padStart(2, '0') + '-' +
+            String(d.getDate()).padStart(2, '0');
+    }
+
+    function getHintDate(timeValue) {
+        if (!timeValue) return '';
+        const hour = parseInt(timeValue.split(':')[0]);
+        const date = hour >= 18 ? shiftDateISO(currentDate, -1) : currentDate;
+        return formatDateShort(date);
+    }
+
+    function updateDateHints() {
+        const el1 = document.getElementById('hint-bedtime');
+        const el2 = document.getElementById('hint-fallasleep');
+        if (el1) el1.textContent = getHintDate(document.getElementById('q-bedtime').value);
+        if (el2) el2.textContent = getHintDate(document.getElementById('q-fallasleep').value);
+    }
+
     let saveTimer = null;
 
     function scheduleAutoSave() {
@@ -138,6 +162,9 @@ const SleepForm = (() => {
                 scheduleAutoSave();
                 if (input.id === 'q-fallasleep' || input.id === 'q-finalwake') {
                     updateSleepDuration();
+                }
+                if (input.id === 'q-bedtime' || input.id === 'q-fallasleep') {
+                    updateDateHints();
                 }
             });
         });
@@ -185,6 +212,7 @@ const SleepForm = (() => {
             const val = String(newH).padStart(2, '0') + ':' + String(newM).padStart(2, '0');
             document.getElementById('q-fallasleep').value = val;
             updateSleepDuration();
+            updateDateHints();
             scheduleAutoSave();
         });
 
@@ -278,6 +306,7 @@ const SleepForm = (() => {
                 formState = {};
             }
             updateSleepDuration();
+            updateDateHints();
             isReadOnly = !!(entry && entry.closed);
             applyReadOnlyState();
         });
