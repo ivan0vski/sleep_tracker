@@ -52,10 +52,6 @@ const App = (() => {
         Protocol.setDate(currentDate);
     }
 
-    function getCurrentDate() {
-        return currentDate;
-    }
-
     function initTheme() {
         const saved = localStorage.getItem('theme');
         if (saved) {
@@ -263,5 +259,5 @@ const App = (() => {
         Protocol.setDate(currentDate);
     }
 
-    return { switchTab, getCurrentDate, advanceDate, setDate };
+    return { switchTab, advanceDate, setDate };
 })();
