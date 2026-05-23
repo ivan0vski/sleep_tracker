@@ -207,9 +207,8 @@ const App = (() => {
         document.getElementById('date-next').addEventListener('click', () => shiftDate(1));
 
         const picker = document.getElementById('date-picker');
-        document.getElementById('date-display').addEventListener('click', () => {
+        picker.addEventListener('focus', () => {
             picker.value = currentDate;
-            picker.showPicker();
         });
         picker.addEventListener('change', () => {
             if (picker.value) setDate(picker.value);

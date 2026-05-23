@@ -398,20 +398,27 @@ input[type="number"]::-webkit-outer-spin-button {
     justify-content: center;
 }
 
+.date-selector__date-wrap {
+    position: relative;
+    cursor: pointer;
+}
+
 .date-selector__date {
     font-size: 16px;
     font-weight: 500;
-    cursor: pointer;
     border-bottom: 1px dashed var(--text-secondary);
     padding-bottom: 2px;
 }
 
 #date-picker {
     position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     opacity: 0;
-    width: 0;
-    height: 0;
-    pointer-events: none;
+    cursor: pointer;
+    -webkit-appearance: none;
 }
 
 /* History */
