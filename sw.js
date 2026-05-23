@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sleep-tracker-v26';
+const CACHE_NAME = 'sleep-tracker-v27';
 const ASSETS = [
     './',
     './index.html',
@@ -18,7 +18,11 @@ const ASSETS = [
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
-            .then(cache => cache.addAll(ASSETS))
+            .then(cache => Promise.all(
+                ASSETS.map(url =>
+                    fetch(url, { cache: 'no-cache' }).then(res => cache.put(url, res))
+                )
+            ))
             .then(() => self.skipWaiting())
     );
 });
