@@ -18,7 +18,15 @@ const History = (() => {
     }
 
     function renderItem(entry) {
-        const feelingText = entry.daytimeFeeling ? `${entry.daytimeFeeling}/5` : '';
+        let feelingText = '';
+        if (entry.daytimeMental || entry.daytimePhysical) {
+            const parts = [];
+            if (entry.daytimeMental) parts.push(`${entry.daytimeMental}`);
+            if (entry.daytimePhysical) parts.push(`${entry.daytimePhysical}`);
+            feelingText = parts.join('/') + '/5';
+        } else if (entry.daytimeFeeling) {
+            feelingText = `${entry.daytimeFeeling}/5`;
+        }
 
         const summary = buildSummary(entry);
 
@@ -69,7 +77,9 @@ const History = (() => {
         if (entry.sleepQuality) lines.push(`Качество сна: ${entry.sleepQuality}/5`);
         if (entry.disturbances && entry.disturbances.length) lines.push(`Мешало: ${entry.disturbances.join(', ')}`);
         if (entry.yesterdayFactors && entry.yesterdayFactors.length) lines.push(`Факторы: ${entry.yesterdayFactors.join(', ')}`);
-        if (entry.daytimeFeeling) lines.push(`Самочувствие: ${entry.daytimeFeeling}/5`);
+        if (entry.daytimeMental) lines.push(`Душевное: ${entry.daytimeMental}/5`);
+        if (entry.daytimePhysical) lines.push(`Физическое: ${entry.daytimePhysical}/5`);
+        if (!entry.daytimeMental && !entry.daytimePhysical && entry.daytimeFeeling) lines.push(`Самочувствие: ${entry.daytimeFeeling}/5`);
         if (entry.protocol) {
             const done = Object.values(entry.protocol).filter(Boolean).length;
             lines.push(`Протокол: ${done}/10 выполнено`);

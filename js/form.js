@@ -13,7 +13,9 @@ const SleepForm = (() => {
         { key: 'wakeUpsDuration', label: 'Просыпался — минут без сна', inputId: 'q-wakeups-duration', type: 'number' },
         { key: 'finalWakeTime', label: 'Во сколько проснулся', inputId: 'q-finalwake', type: 'time' },
         { key: 'outOfBedTime', label: 'Во сколько встал', inputId: 'q-outofbed', type: 'time' },
-        { key: 'sleepQuality', label: 'Качество сна', type: 'rating' }
+        { key: 'sleepQuality', label: 'Качество сна', type: 'rating' },
+        { key: 'daytimeMental', label: 'Самочувствие — душевное', type: 'rating' },
+        { key: 'daytimePhysical', label: 'Самочувствие — физическое', type: 'rating' }
     ];
 
     function todayISO() {
@@ -33,6 +35,13 @@ const SleepForm = (() => {
             <div class="card">
                 <div class="card__title">Во сколько примерно заснул?</div>
                 <input type="time" id="q-fallasleep" value="${formState.fallAsleepTime || ''}">
+                <div class="quick-time" id="quick-time">
+                    <span class="quick-time__label">Через</span>
+                    <button class="quick-time__btn" data-offset="10">10</button>
+                    <button class="quick-time__btn" data-offset="15">15</button>
+                    <button class="quick-time__btn" data-offset="20">20</button>
+                    <span class="quick-time__label">минут</span>
+                </div>
             </div>
             <div class="card">
                 <div class="card__title">Просыпался ночью</div>
@@ -84,8 +93,13 @@ const SleepForm = (() => {
             </div>
             <div class="card">
                 <div class="card__title">Самочувствие днём</div>
-                <div class="rating" id="rating-daytime">
-                    ${[1,2,3,4,5].map(n => `<button class="rating__btn ${formState.daytimeFeeling === n ? 'rating__btn--active' : ''}" data-value="${n}">${n}</button>`).join('')}
+                <div class="card__label">Душевное</div>
+                <div class="rating" id="rating-daytime-mental">
+                    ${[1,2,3,4,5].map(n => `<button class="rating__btn ${formState.daytimeMental === n ? 'rating__btn--active' : ''}" data-value="${n}">${n}</button>`).join('')}
+                </div>
+                <div class="card__label" style="margin-top: 12px">Физическое</div>
+                <div class="rating" id="rating-daytime-physical">
+                    ${[1,2,3,4,5].map(n => `<button class="rating__btn ${formState.daytimePhysical === n ? 'rating__btn--active' : ''}" data-value="${n}">${n}</button>`).join('')}
                 </div>
             </div>
             <button class="btn-close-day-main" id="btn-close-day-main">Закрыть день</button>
@@ -138,13 +152,39 @@ const SleepForm = (() => {
             scheduleAutoSave();
         });
 
-        document.getElementById('rating-daytime').addEventListener('click', (e) => {
+        document.getElementById('rating-daytime-mental').addEventListener('click', (e) => {
             if (isReadOnly) return;
             const btn = e.target.closest('.rating__btn');
             if (!btn) return;
-            formState.daytimeFeeling = parseInt(btn.dataset.value);
+            formState.daytimeMental = parseInt(btn.dataset.value);
             btn.parentElement.querySelectorAll('.rating__btn').forEach(b => b.classList.remove('rating__btn--active'));
             btn.classList.add('rating__btn--active');
+            scheduleAutoSave();
+        });
+
+        document.getElementById('rating-daytime-physical').addEventListener('click', (e) => {
+            if (isReadOnly) return;
+            const btn = e.target.closest('.rating__btn');
+            if (!btn) return;
+            formState.daytimePhysical = parseInt(btn.dataset.value);
+            btn.parentElement.querySelectorAll('.rating__btn').forEach(b => b.classList.remove('rating__btn--active'));
+            btn.classList.add('rating__btn--active');
+            scheduleAutoSave();
+        });
+
+        document.getElementById('quick-time').addEventListener('click', (e) => {
+            if (isReadOnly) return;
+            const btn = e.target.closest('.quick-time__btn');
+            if (!btn) return;
+            const bedTime = document.getElementById('q-bedtime').value;
+            if (!bedTime) return;
+            const [h, m] = bedTime.split(':').map(Number);
+            const total = h * 60 + m + parseInt(btn.dataset.offset);
+            const newH = Math.floor(total / 60) % 24;
+            const newM = total % 60;
+            const val = String(newH).padStart(2, '0') + ':' + String(newM).padStart(2, '0');
+            document.getElementById('q-fallasleep').value = val;
+            updateSleepDuration();
             scheduleAutoSave();
         });
 
@@ -223,7 +263,15 @@ const SleepForm = (() => {
                 document.getElementById('q-finalwake').value = entry.finalWakeTime || '';
                 document.getElementById('q-outofbed').value = entry.outOfBedTime || '';
                 updateRating('rating-quality', entry.sleepQuality);
-                updateRating('rating-daytime', entry.daytimeFeeling);
+                if (entry.daytimeMental || entry.daytimePhysical) {
+                    updateRating('rating-daytime-mental', entry.daytimeMental);
+                    updateRating('rating-daytime-physical', entry.daytimePhysical);
+                } else if (entry.daytimeFeeling) {
+                    formState.daytimeMental = entry.daytimeFeeling;
+                    formState.daytimePhysical = entry.daytimeFeeling;
+                    updateRating('rating-daytime-mental', entry.daytimeFeeling);
+                    updateRating('rating-daytime-physical', entry.daytimeFeeling);
+                }
                 updateTags('tags-disturbances', DISTURBANCE_TAGS, entry.disturbances || [], entry.customDisturbances || []);
                 updateTags('tags-factors', FACTOR_TAGS, entry.yesterdayFactors || [], entry.customFactors || []);
             } else {
@@ -301,7 +349,8 @@ const SleepForm = (() => {
                 customDisturbances: formState.customDisturbances || [],
                 yesterdayFactors: formState.yesterdayFactors || [],
                 customFactors: formState.customFactors || [],
-                daytimeFeeling: formState.daytimeFeeling || null,
+                daytimeMental: formState.daytimeMental || null,
+                daytimePhysical: formState.daytimePhysical || null,
                 createdAt: (existing && existing.createdAt) || Date.now()
             };
             if (existing && existing.protocol) {
@@ -316,6 +365,12 @@ const SleepForm = (() => {
         toast.textContent = msg;
         toast.classList.add('toast--visible');
         setTimeout(() => toast.classList.remove('toast--visible'), 2000);
+    }
+
+    function formatDateShort(isoDate) {
+        const [, m, d] = isoDate.split('-');
+        const months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+        return `${parseInt(d)} ${months[parseInt(m) - 1]}`;
     }
 
     function showCloseDayModal() {
@@ -390,7 +445,7 @@ const SleepForm = (() => {
         overlay.className = 'close-day-overlay';
         overlay.innerHTML = `
             <div class="close-day-modal">
-                <div class="close-day-modal__title">Закрыть день</div>
+                <div class="close-day-modal__title">Закрытие ${formatDateShort(currentDate)}</div>
                 <div class="close-day-modal__status ${allComplete ? 'close-day-modal__status--ok' : ''}">${statusText}</div>
                 ${trackerHTML}
                 ${protocolHTML}
@@ -429,8 +484,8 @@ const SleepForm = (() => {
         overlay.querySelectorAll('.close-day-rating').forEach(div => {
             const active = div.querySelector('.rating__btn--active');
             if (active) {
-                formState.sleepQuality = parseInt(active.dataset.value);
-                updateRating('rating-quality', formState.sleepQuality);
+                const key = div.dataset.trackerKey;
+                formState[key] = parseInt(active.dataset.value);
             }
         });
 
