@@ -15,8 +15,7 @@ const App = (() => {
     const TAB_ORDER = ['form', 'protocol', 'routine', 'history'];
     let currentIndex = 0;
     let container = null;
-    let animating = false;
-    let animationId = null;
+    let scrollAnimId = null;
     let scrollDelayId = null;
 
     function todayISO() {
@@ -91,6 +90,16 @@ const App = (() => {
         if (metaTheme) metaTheme.content = theme === 'light' ? '#f0f0f5' : '#1a1a2e';
     }
 
+    /* ── Navigation ── */
+
+    function setViewHeight(h) {
+        container.style.height = h + 'px';
+    }
+
+    function getViewHeight(index) {
+        return container.querySelectorAll('.view')[index].offsetHeight;
+    }
+
     function slideTo(index, instant) {
         if (instant) {
             container.classList.add('swipe-container--dragging');
@@ -101,58 +110,46 @@ const App = (() => {
         container.style.transform = `translateX(-${index * 25}%)`;
     }
 
-    function updateContainerHeight() {
-        if (animating) return;
-        const views = container.querySelectorAll('.view');
-        const activeView = views[currentIndex];
-        if (activeView) {
-            container.style.height = activeView.offsetHeight + 'px';
-        }
+    function cancelScrollAnim() {
+        if (scrollAnimId) { cancelAnimationFrame(scrollAnimId); scrollAnimId = null; }
+        if (scrollDelayId) { clearTimeout(scrollDelayId); scrollDelayId = null; }
     }
 
-    function animateToTop(targetHeight) {
-        if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
-        if (scrollDelayId) { clearTimeout(scrollDelayId); scrollDelayId = null; }
+    function scrollToTopAfterSwitch(targetHeight) {
+        cancelScrollAnim();
 
-        const startScroll = window.scrollY;
-        if (startScroll === 0) {
-            container.style.height = targetHeight + 'px';
-            animating = false;
+        if (window.scrollY === 0) {
+            setViewHeight(targetHeight);
             return;
         }
 
-        animating = true;
-
         scrollDelayId = setTimeout(() => {
             scrollDelayId = null;
-            container.style.height = targetHeight + 'px';
-            const scrollStart = window.scrollY;
-            if (scrollStart === 0) { animating = false; return; }
+            setViewHeight(targetHeight);
+            const startScroll = window.scrollY;
+            if (startScroll === 0) return;
             const startTime = performance.now();
-            const duration = 600;
-
-            function ease(t) {
-                return 1 - Math.pow(1 - t, 3);
-            }
 
             function tick(now) {
-                const t = Math.min((now - startTime) / duration, 1);
-                window.scrollTo(0, Math.round(scrollStart * (1 - ease(t))));
+                const t = Math.min((now - startTime) / 600, 1);
+                const ease = 1 - Math.pow(1 - t, 3);
+                window.scrollTo(0, Math.round(startScroll * (1 - ease)));
                 if (t < 1) {
-                    animationId = requestAnimationFrame(tick);
+                    scrollAnimId = requestAnimationFrame(tick);
                 } else {
-                    animating = false;
-                    animationId = null;
+                    scrollAnimId = null;
                 }
             }
-            animationId = requestAnimationFrame(tick);
+            scrollAnimId = requestAnimationFrame(tick);
         }, 200);
     }
 
     function setupHeightObserver() {
-        const views = container.querySelectorAll('.view');
-        const observer = new ResizeObserver(() => updateContainerHeight());
-        views.forEach(v => observer.observe(v));
+        const observer = new ResizeObserver(() => {
+            if (scrollDelayId || scrollAnimId) return;
+            setViewHeight(getViewHeight(currentIndex));
+        });
+        container.querySelectorAll('.view').forEach(v => observer.observe(v));
     }
 
     function setupSwipe() {
@@ -163,8 +160,8 @@ const App = (() => {
         let isLocked = false;
         let baseOffset = 0;
         let viewWidth = 0;
-        let dragHeights = [];
         let dragScrollY = 0;
+        let dragHeights = [];
 
         document.addEventListener('touchstart', (e) => {
             startX = e.touches[0].clientX;
@@ -177,7 +174,6 @@ const App = (() => {
 
         document.addEventListener('touchmove', (e) => {
             if (startX === null || isLocked) return;
-
             const x = e.touches[0].clientX;
             const y = e.touches[0].clientY;
             const deltaX = x - startX;
@@ -194,27 +190,23 @@ const App = (() => {
                 isDragging = true;
                 startX = x;
                 dragScrollY = window.scrollY;
-                if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
-                if (scrollDelayId) { clearTimeout(scrollDelayId); scrollDelayId = null; }
-                animating = false;
+                cancelScrollAnim();
                 dragHeights = Array.from(container.querySelectorAll('.view')).map(v => v.offsetHeight);
                 container.classList.add('swipe-container--dragging');
                 return;
             }
 
-            if (isDragging) {
-                e.preventDefault();
-                window.scrollTo(0, dragScrollY);
-                const dragDelta = x - startX;
-                let offset = baseOffset - dragDelta;
-                const maxOffset = (TAB_ORDER.length - 1) * viewWidth;
-                offset = Math.max(-viewWidth * 0.15, Math.min(offset, maxOffset + viewWidth * 0.15));
-                container.style.transform = `translateX(-${offset}px)`;
+            e.preventDefault();
+            window.scrollTo(0, dragScrollY);
+            const dragDelta = x - startX;
+            let offset = baseOffset - dragDelta;
+            const maxOffset = (TAB_ORDER.length - 1) * viewWidth;
+            offset = Math.max(-viewWidth * 0.15, Math.min(offset, maxOffset + viewWidth * 0.15));
+            container.style.transform = `translateX(-${offset}px)`;
 
-                const neighborIdx = dragDelta > 0 ? currentIndex - 1 : currentIndex + 1;
-                if (neighborIdx >= 0 && neighborIdx < dragHeights.length) {
-                    container.style.height = Math.max(dragHeights[currentIndex], dragHeights[neighborIdx]) + 'px';
-                }
+            const neighborIdx = dragDelta > 0 ? currentIndex - 1 : currentIndex + 1;
+            if (neighborIdx >= 0 && neighborIdx < dragHeights.length) {
+                setViewHeight(Math.max(dragHeights[currentIndex], dragHeights[neighborIdx]));
             }
         }, { passive: false });
 
@@ -224,7 +216,6 @@ const App = (() => {
                 isLocked = false;
                 return;
             }
-
             container.classList.remove('swipe-container--dragging');
             const deltaX = e.changedTouches[0].clientX - startX;
             startX = null;
@@ -232,22 +223,74 @@ const App = (() => {
             isLocked = false;
 
             const swipeRatio = Math.abs(deltaX) / viewWidth;
-
             if (swipeRatio > SNAP_THRESHOLD && deltaX > 0 && currentIndex > 0) {
                 switchTab(TAB_ORDER[currentIndex - 1]);
             } else if (swipeRatio > SNAP_THRESHOLD && deltaX < 0 && currentIndex < TAB_ORDER.length - 1) {
                 switchTab(TAB_ORDER[currentIndex + 1]);
             } else {
                 slideTo(currentIndex);
+                setViewHeight(getViewHeight(currentIndex));
             }
         }, { passive: true });
     }
+
+    function switchTab(tabName) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('tab--active'));
+        document.querySelector(`[data-tab="${tabName}"]`).classList.add('tab--active');
+
+        const newIndex = TAB_ORDER.indexOf(tabName);
+        const gap = Math.abs(newIndex - currentIndex);
+        if (gap > 1) {
+            slideTo(newIndex > currentIndex ? newIndex - 1 : newIndex + 1, true);
+        }
+        currentIndex = newIndex;
+        slideTo(currentIndex);
+        scrollToTopAfterSwitch(getViewHeight(currentIndex));
+
+        if (tabName === 'protocol') Protocol.render();
+        else if (tabName === 'routine') Routine.render();
+        else if (tabName === 'history') History.render();
+    }
+
+    /* ── Init ── */
 
     function showVersion() {
         fetch('./sw.js').then(r => r.text()).then(text => {
             const m = text.match(/sleep-tracker-(v\d+)/);
             if (m) document.getElementById('app-version').textContent = m[1];
         }).catch(() => {});
+    }
+
+    function registerServiceWorker() {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js')
+                .catch(err => console.warn('SW registration failed:', err));
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                window.location.reload();
+            });
+        }
+    }
+
+    function setupDateSelector() {
+        document.getElementById('date-prev').addEventListener('click', () => shiftDate(-1));
+        document.getElementById('date-next').addEventListener('click', () => shiftDate(1));
+
+        const picker = document.getElementById('date-picker');
+        picker.addEventListener('focus', () => { picker.value = currentDate; });
+        picker.addEventListener('change', () => {
+            if (picker.value) setDate(picker.value);
+            picker.blur();
+        });
+
+        document.getElementById('btn-today').addEventListener('click', () => {
+            setDate(todayISO());
+        });
+    }
+
+    function setupTabs() {
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+        });
     }
 
     function init() {
@@ -267,68 +310,6 @@ const App = (() => {
             setupHeightObserver();
             slideTo(0);
         });
-    }
-
-    function registerServiceWorker() {
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js')
-                .catch(err => console.warn('SW registration failed:', err));
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-                window.location.reload();
-            });
-        }
-    }
-
-    function setupDateSelector() {
-        document.getElementById('date-prev').addEventListener('click', () => shiftDate(-1));
-        document.getElementById('date-next').addEventListener('click', () => shiftDate(1));
-
-        const picker = document.getElementById('date-picker');
-        picker.addEventListener('focus', () => {
-            picker.value = currentDate;
-        });
-        picker.addEventListener('change', () => {
-            if (picker.value) setDate(picker.value);
-            picker.blur();
-        });
-
-        document.getElementById('btn-today').addEventListener('click', () => {
-            setDate(todayISO());
-        });
-    }
-
-    function setupTabs() {
-        const tabs = document.querySelectorAll('.tab');
-        tabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                switchTab(tab.dataset.tab);
-            });
-        });
-    }
-
-    function switchTab(tabName) {
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('tab--active'));
-        document.querySelector(`[data-tab="${tabName}"]`).classList.add('tab--active');
-
-        const newIndex = TAB_ORDER.indexOf(tabName);
-        const gap = Math.abs(newIndex - currentIndex);
-        if (gap > 1) {
-            const neighbor = newIndex > currentIndex ? newIndex - 1 : newIndex + 1;
-            slideTo(neighbor, true);
-        }
-        currentIndex = newIndex;
-        slideTo(currentIndex);
-
-        const views = container.querySelectorAll('.view');
-        animateToTop(views[currentIndex].offsetHeight);
-
-        if (tabName === 'protocol') {
-            Protocol.render();
-        } else if (tabName === 'routine') {
-            Routine.render();
-        } else if (tabName === 'history') {
-            History.render();
-        }
     }
 
     document.addEventListener('DOMContentLoaded', init);
