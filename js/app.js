@@ -17,6 +17,7 @@ const App = (() => {
     let container = null;
     let animating = false;
     let animationId = null;
+    let scrollDelayId = null;
 
     function todayISO() {
         const d = new Date();
@@ -110,34 +111,42 @@ const App = (() => {
     }
 
     function animateToTop(targetHeight) {
-        if (animationId) cancelAnimationFrame(animationId);
-        const startHeight = parseFloat(container.style.height) || targetHeight;
+        if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+        if (scrollDelayId) { clearTimeout(scrollDelayId); scrollDelayId = null; }
+
         const startScroll = window.scrollY;
-        if (startScroll === 0 && Math.abs(startHeight - targetHeight) < 1) {
+        if (startScroll === 0) {
             container.style.height = targetHeight + 'px';
+            animating = false;
             return;
         }
-        const startTime = performance.now();
-        const duration = 300;
+
         animating = true;
 
-        function ease(t) {
-            return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-        }
+        scrollDelayId = setTimeout(() => {
+            scrollDelayId = null;
+            container.style.height = targetHeight + 'px';
+            const scrollStart = window.scrollY;
+            if (scrollStart === 0) { animating = false; return; }
+            const startTime = performance.now();
+            const duration = 600;
 
-        function tick(now) {
-            const t = Math.min((now - startTime) / duration, 1);
-            const e = ease(t);
-            container.style.height = (startHeight + (targetHeight - startHeight) * e) + 'px';
-            window.scrollTo(0, Math.round(startScroll * (1 - e)));
-            if (t < 1) {
-                animationId = requestAnimationFrame(tick);
-            } else {
-                animating = false;
-                animationId = null;
+            function ease(t) {
+                return 1 - Math.pow(1 - t, 3);
             }
-        }
-        animationId = requestAnimationFrame(tick);
+
+            function tick(now) {
+                const t = Math.min((now - startTime) / duration, 1);
+                window.scrollTo(0, Math.round(scrollStart * (1 - ease(t))));
+                if (t < 1) {
+                    animationId = requestAnimationFrame(tick);
+                } else {
+                    animating = false;
+                    animationId = null;
+                }
+            }
+            animationId = requestAnimationFrame(tick);
+        }, 200);
     }
 
     function setupHeightObserver() {
@@ -185,11 +194,9 @@ const App = (() => {
                 isDragging = true;
                 startX = x;
                 dragScrollY = window.scrollY;
-                if (animationId) {
-                    cancelAnimationFrame(animationId);
-                    animating = false;
-                    animationId = null;
-                }
+                if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+                if (scrollDelayId) { clearTimeout(scrollDelayId); scrollDelayId = null; }
+                animating = false;
                 dragHeights = Array.from(container.querySelectorAll('.view')).map(v => v.offsetHeight);
                 container.classList.add('swipe-container--dragging');
                 return;
