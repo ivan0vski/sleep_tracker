@@ -45,9 +45,17 @@ body {
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
     scrollbar-width: none;
+    -ms-overflow-style: none;
 }
 
-body::-webkit-scrollbar {
+html {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
     display: none;
 }
 
