@@ -253,6 +253,8 @@ const App = (() => {
     }
 
     function switchTab(tabName) {
+        window.scrollTo({ top: 0 });
+
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('tab--active'));
         document.querySelector(`[data-tab="${tabName}"]`).classList.add('tab--active');
 
@@ -265,7 +267,6 @@ const App = (() => {
         currentIndex = newIndex;
         slideTo(currentIndex);
         updateContainerHeight();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
 
         if (tabName === 'protocol') {
             Protocol.render();
