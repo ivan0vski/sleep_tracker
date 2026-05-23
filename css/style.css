@@ -108,6 +108,35 @@ body {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
+/* Today button */
+.today-row {
+    display: flex;
+    margin-bottom: 8px;
+    min-height: 32px;
+}
+
+.btn-today {
+    padding: 5px 16px;
+    border: 1px solid var(--accent);
+    border-radius: 20px;
+    background: transparent;
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: var(--transition);
+}
+
+.btn-today:active {
+    background: var(--accent);
+    color: #fff;
+}
+
+.btn-today--hidden {
+    display: none;
+}
+
 .header__nav {
     display: flex;
     background: var(--bg-card);

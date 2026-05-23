@@ -31,6 +31,14 @@ const App = (() => {
 
     function updateDateDisplay() {
         document.getElementById('date-display').textContent = formatDateDisplay(currentDate);
+        updateTodayButton();
+    }
+
+    function updateTodayButton() {
+        const btn = document.getElementById('btn-today');
+        if (btn) {
+            btn.classList.toggle('btn-today--hidden', currentDate === todayISO());
+        }
     }
 
     function shiftDate(offset) {
@@ -212,6 +220,11 @@ const App = (() => {
         });
         picker.addEventListener('change', () => {
             if (picker.value) setDate(picker.value);
+            picker.blur();
+        });
+
+        document.getElementById('btn-today').addEventListener('click', () => {
+            setDate(todayISO());
         });
     }
 
