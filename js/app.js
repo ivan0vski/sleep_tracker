@@ -98,6 +98,20 @@ const App = (() => {
         container.style.transform = `translateX(-${index * 25}%)`;
     }
 
+    function updateContainerHeight() {
+        const views = container.querySelectorAll('.view');
+        const activeView = views[currentIndex];
+        if (activeView) {
+            container.style.height = activeView.offsetHeight + 'px';
+        }
+    }
+
+    function setupHeightObserver() {
+        const views = container.querySelectorAll('.view');
+        const observer = new ResizeObserver(() => updateContainerHeight());
+        views.forEach(v => observer.observe(v));
+    }
+
     function setupSwipe() {
         const SNAP_THRESHOLD = 0.15;
         const LOCK_ANGLE_TAN = 0.6;
@@ -196,6 +210,7 @@ const App = (() => {
             setupTabs();
             setupDateSelector();
             setupSwipe();
+            setupHeightObserver();
             slideTo(0);
         });
     }
@@ -249,6 +264,8 @@ const App = (() => {
         }
         currentIndex = newIndex;
         slideTo(currentIndex);
+        updateContainerHeight();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
 
         if (tabName === 'protocol') {
             Protocol.render();
