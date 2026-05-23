@@ -148,7 +148,6 @@ const App = (() => {
 
     function setupSwipe() {
         const SNAP_THRESHOLD = 0.075;
-        const LOCK_ANGLE_TAN = 0.6;
         let startX = null;
         let startY = null;
         let isDragging = false;
@@ -176,25 +175,24 @@ const App = (() => {
             const deltaY = y - startY;
 
             if (!isDragging) {
-                if (Math.abs(deltaX) < 10 && Math.abs(deltaY) < 10) return;
-                if (Math.abs(deltaY) > Math.abs(deltaX) * LOCK_ANGLE_TAN && Math.abs(deltaY) > 10) {
+                if (Math.abs(deltaX) < 3 && Math.abs(deltaY) < 3) return;
+                if (Math.abs(deltaY) > Math.abs(deltaX)) {
                     isLocked = true;
                     startX = null;
                     return;
                 }
-                if (Math.abs(deltaX) > 10) {
-                    isDragging = true;
-                    startX = x;
-                    dragScrollY = window.scrollY;
-                    if (animationId) {
-                        cancelAnimationFrame(animationId);
-                        animating = false;
-                        animationId = null;
-                    }
-                    dragHeights = Array.from(container.querySelectorAll('.view')).map(v => v.offsetHeight);
-                    container.classList.add('swipe-container--dragging');
-                    return;
+                e.preventDefault();
+                isDragging = true;
+                startX = x;
+                dragScrollY = window.scrollY;
+                if (animationId) {
+                    cancelAnimationFrame(animationId);
+                    animating = false;
+                    animationId = null;
                 }
+                dragHeights = Array.from(container.querySelectorAll('.view')).map(v => v.offsetHeight);
+                container.classList.add('swipe-container--dragging');
+                return;
             }
 
             if (isDragging) {
