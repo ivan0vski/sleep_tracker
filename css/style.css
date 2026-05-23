@@ -36,8 +36,9 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
     background: var(--bg-primary);
     color: var(--text-primary);
-    min-height: 100vh;
-    min-height: 100dvh;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
     padding-left: env(safe-area-inset-left);
@@ -62,8 +63,10 @@ body::-webkit-scrollbar,
 .app {
     max-width: 480px;
     margin: 0 auto;
-    padding: var(--spacing);
-    padding-bottom: 40px;
+    padding: var(--spacing) var(--spacing) 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Header */
@@ -174,15 +177,17 @@ body::-webkit-scrollbar,
 
 /* Views */
 .content {
+    flex: 1;
     overflow: hidden;
+    min-height: 0;
 }
 
 .swipe-container {
     display: flex;
     width: 400%;
+    height: 100%;
     transition: transform 0.3s ease;
     will-change: transform;
-    align-items: flex-start;
 }
 
 .swipe-container--dragging {
@@ -192,7 +197,10 @@ body::-webkit-scrollbar,
 .view {
     width: 25%;
     flex-shrink: 0;
-    min-height: 1px;
+    height: 100%;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 40px;
 }
 
 /* Form Cards */

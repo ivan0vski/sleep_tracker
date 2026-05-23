@@ -15,8 +15,6 @@ const App = (() => {
     const TAB_ORDER = ['form', 'protocol', 'routine', 'history'];
     let currentIndex = 0;
     let container = null;
-    let scrollAnimId = null;
-    let scrollDelayId = null;
 
     function todayISO() {
         const d = new Date();
@@ -92,14 +90,6 @@ const App = (() => {
 
     /* ── Navigation ── */
 
-    function setViewHeight(h) {
-        container.style.height = h + 'px';
-    }
-
-    function getViewHeight(index) {
-        return container.querySelectorAll('.view')[index].offsetHeight;
-    }
-
     function slideTo(index, instant) {
         if (instant) {
             container.classList.add('swipe-container--dragging');
@@ -110,48 +100,6 @@ const App = (() => {
         container.style.transform = `translateX(-${index * 25}%)`;
     }
 
-    function cancelScrollAnim() {
-        if (scrollAnimId) { cancelAnimationFrame(scrollAnimId); scrollAnimId = null; }
-        if (scrollDelayId) { clearTimeout(scrollDelayId); scrollDelayId = null; }
-    }
-
-    function scrollToTopAfterSwitch(targetHeight) {
-        cancelScrollAnim();
-
-        if (window.scrollY === 0) {
-            setViewHeight(targetHeight);
-            return;
-        }
-
-        scrollDelayId = setTimeout(() => {
-            scrollDelayId = null;
-            setViewHeight(targetHeight);
-            const startScroll = window.scrollY;
-            if (startScroll === 0) return;
-            const startTime = performance.now();
-
-            function tick(now) {
-                const t = Math.min((now - startTime) / 600, 1);
-                const ease = 1 - Math.pow(1 - t, 3);
-                window.scrollTo(0, Math.round(startScroll * (1 - ease)));
-                if (t < 1) {
-                    scrollAnimId = requestAnimationFrame(tick);
-                } else {
-                    scrollAnimId = null;
-                }
-            }
-            scrollAnimId = requestAnimationFrame(tick);
-        }, 200);
-    }
-
-    function setupHeightObserver() {
-        const observer = new ResizeObserver(() => {
-            if (scrollDelayId || scrollAnimId) return;
-            setViewHeight(getViewHeight(currentIndex));
-        });
-        container.querySelectorAll('.view').forEach(v => observer.observe(v));
-    }
-
     function setupSwipe() {
         const SNAP_THRESHOLD = 0.075;
         let startX = null;
@@ -160,8 +108,6 @@ const App = (() => {
         let isLocked = false;
         let baseOffset = 0;
         let viewWidth = 0;
-        let dragScrollY = 0;
-        let dragHeights = [];
 
         document.addEventListener('touchstart', (e) => {
             startX = e.touches[0].clientX;
@@ -189,25 +135,19 @@ const App = (() => {
                 e.preventDefault();
                 isDragging = true;
                 startX = x;
-                dragScrollY = window.scrollY;
-                cancelScrollAnim();
-                dragHeights = Array.from(container.querySelectorAll('.view')).map(v => v.offsetHeight);
+                container.querySelectorAll('.view').forEach((v, i) => {
+                    if (i !== currentIndex) v.scrollTop = 0;
+                });
                 container.classList.add('swipe-container--dragging');
                 return;
             }
 
             e.preventDefault();
-            window.scrollTo(0, dragScrollY);
             const dragDelta = x - startX;
             let offset = baseOffset - dragDelta;
             const maxOffset = (TAB_ORDER.length - 1) * viewWidth;
             offset = Math.max(-viewWidth * 0.15, Math.min(offset, maxOffset + viewWidth * 0.15));
             container.style.transform = `translateX(-${offset}px)`;
-
-            const neighborIdx = dragDelta > 0 ? currentIndex - 1 : currentIndex + 1;
-            if (neighborIdx >= 0 && neighborIdx < dragHeights.length) {
-                setViewHeight(Math.max(dragHeights[currentIndex], dragHeights[neighborIdx]));
-            }
         }, { passive: false });
 
         document.addEventListener('touchend', (e) => {
@@ -229,7 +169,6 @@ const App = (() => {
                 switchTab(TAB_ORDER[currentIndex + 1]);
             } else {
                 slideTo(currentIndex);
-                setViewHeight(getViewHeight(currentIndex));
             }
         }, { passive: true });
     }
@@ -245,7 +184,7 @@ const App = (() => {
         }
         currentIndex = newIndex;
         slideTo(currentIndex);
-        scrollToTopAfterSwitch(getViewHeight(currentIndex));
+        container.querySelectorAll('.view')[currentIndex].scrollTop = 0;
 
         if (tabName === 'protocol') Protocol.render();
         else if (tabName === 'routine') Routine.render();
@@ -307,7 +246,6 @@ const App = (() => {
             setupTabs();
             setupDateSelector();
             setupSwipe();
-            setupHeightObserver();
             slideTo(0);
         });
     }
