@@ -120,7 +120,8 @@ body {
     cursor: pointer;
     touch-action: manipulation;
     transition: var(--transition);
-    margin-left: auto;
+    position: absolute;
+    left: 0;
 }
 
 .btn-today:active {
@@ -400,6 +401,7 @@ input[type="number"]::-webkit-outer-spin-button {
 
 /* Date selector */
 .date-selector {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
