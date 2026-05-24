@@ -12,7 +12,7 @@ function calcSleepDuration(fallAsleep, finalWake) {
 const App = (() => {
     let currentDate = todayISO();
 
-    const TAB_ORDER = ['form', 'protocol', 'routine', 'history'];
+    const TAB_ORDER = ['form', 'protocol', 'routine', 'instruction', 'history'];
     let currentIndex = 0;
     let container = null;
 
@@ -90,11 +90,11 @@ const App = (() => {
     function slideTo(index, instant) {
         if (instant) {
             container.classList.add('swipe-container--dragging');
-            container.style.transform = `translateX(-${index * 25}%)`;
+            container.style.transform = `translateX(-${index * 20}%)`;
             container.offsetWidth;
             container.classList.remove('swipe-container--dragging');
         }
-        container.style.transform = `translateX(-${index * 25}%)`;
+        container.style.transform = `translateX(-${index * 20}%)`;
     }
 
     function setupSwipe() {
@@ -185,6 +185,7 @@ const App = (() => {
 
         if (tabName === 'protocol') Protocol.render();
         else if (tabName === 'routine') Routine.render();
+        else if (tabName === 'instruction') Instruction.render();
         else if (tabName === 'history') History.render();
     }
 
@@ -239,6 +240,7 @@ const App = (() => {
             SleepForm.render();
             Protocol.render();
             Routine.render();
+            Instruction.render();
             History.render();
             setupTabs();
             setupDateSelector();
