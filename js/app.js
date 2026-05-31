@@ -173,11 +173,10 @@ const App = (() => {
 
     /* ── Init ── */
 
-    function showVersion() {
-        fetch('./sw.js').then(r => r.text()).then(text => {
-            const m = text.match(/sleep-tracker-(v\d+)/);
-            if (m) document.getElementById('app-version').textContent = m[1];
-        }).catch(() => {});
+    function setupSettingsButton() {
+        const btn = document.getElementById('settings-btn');
+        btn.textContent = '⚙️';
+        btn.addEventListener('click', () => Settings.open());
     }
 
     function registerServiceWorker() {
@@ -215,7 +214,7 @@ const App = (() => {
     function init() {
         registerServiceWorker();
         initTheme();
-        showVersion();
+        setupSettingsButton();
         container = document.getElementById('swipe-container');
         DB.open().then(() => {
             updateDateDisplay();
