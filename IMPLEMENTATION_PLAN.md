@@ -65,127 +65,190 @@ PhaseEngine.getDayContext(plan, routineSteps, dateStr) → DayContext
 
 ## Раздел 2. Слой данных — IndexedDB ✅ ВЫПОЛНЕН
 
-**Суть:** Расширить js/db.js — добавить хранилища для планов, шагов распорядка и прогресса. CRUD-функции.
+**Статус:** реализован, закоммичен, запушен.
 
-**Модифицировать:** `js/db.js`
+**Что сделано:**
 
-**Новые object stores:**
+### js/db.js — расширение модуля
 
-```
-1. 'sleepPlans' — хранилище планов
-   keyPath: 'id'
-   Индексы: status, createdAt
-   Объект: SleepPlan (см. ARCHITECTURE раздел 2.1)
+- DB_VERSION: 1 → 2
+- Три новых object store в `onupgradeneeded` (через `if (!db.objectStoreNames.contains(...))`):
+  - `sleepPlans` — keyPath: `id`, индексы: `status`, `createdAt`
+  - `routineSteps` — keyPath: `id`, индекс: `order`
+  - `routineProgress` — keyPath: `date`
+- Существующий store `entries` не тронут
 
-2. 'routineSteps' — хранилище шагов распорядка
-   keyPath: 'id'
-   Индекс: order
-   Объект: RoutineStep (см. ARCHITECTURE раздел 2.3)
-
-3. 'routineProgress' — прогресс выполнения шагов по дням
-   keyPath: 'date'
-   Объект: { date: "2026-06-05", steps: { step_1: true, step_3: true } }
-```
-
-**Версия IndexedDB:** инкрементировать до 2. В `onupgradeneeded` создавать новые stores через `if (!db.objectStoreNames.contains(...))`.
-
-**CRUD-функции:**
+8 новых CRUD-функций:
 
 ```
-// Планы
-DB.savePlan(plan) → Promise<void>
-DB.getActivePlan() → Promise<SleepPlan | null>
-DB.updatePlanStatus(planId, status) → Promise<void>
-DB.getArchivedPlans() → Promise<SleepPlan[]>
+DB.savePlan(plan)                           — put в sleepPlans
+DB.getActivePlan()                          — index по status='active', первый результат
+DB.updatePlanStatus(planId, status)          — get + изменить status + put
+DB.getArchivedPlans()                       — index по status='archived', getAll
 
-// Шаги распорядка
-DB.saveRoutineSteps(steps[]) → Promise<void>
-DB.getRoutineSteps() → Promise<RoutineStep[]>
+DB.saveRoutineSteps(steps[])                — clear store + put каждый шаг
+DB.getRoutineSteps()                        — getAll, сортировка по order
 
-// Прогресс распорядка
-DB.toggleRoutineProgress(dateStr, stepId) → Promise<void>
-DB.getRoutineProgress(dateStr) → Promise<{ [stepId]: boolean }>
+DB.toggleRoutineProgress(dateStr, stepId)   — get/создать запись, toggle шаг, put
+DB.getRoutineProgress(dateStr)              — get запись, вернуть steps или {}
 ```
 
-**Инфраструктура:** обновить sw.js версию после изменений.
+### Инфраструктура
 
-**Зависимости:** Раздел 1 (типы данных, дефолтные шаги).
+- sw.js: v44 → v45
+
+### Всё по плану, пропусков нет.
 
 ---
 
 ## Раздел 3. Редактор распорядка ✅ ВЫПОЛНЕН
 
-**Суть:** Переиспользуемый UI-компонент для управления шагами вечернего распорядка. Используется в визарде (шаг 5) и в настройках.
+**Статус:** реализован, закоммичен, запушен.
 
-**Создать:** `js/routineEditor.js`
+**Что сделано:**
 
-**API (IIFE-стиль):**
-```javascript
-RoutineEditor.open({
-  steps: existingSteps,
-  previewBed: '23:00',
-  onSave: (steps) => { ... },
-  onCancel: () => { ... }
-});
+### js/routineEditor.js — новый IIFE-модуль `RoutineEditor`
+
+API:
+```
+RoutineEditor.open({ steps, previewBed, onSave, onCancel })
+RoutineEditor.close()
 ```
 
-**Функциональность:** список шагов, добавление/удаление/редактирование/порядок (кнопки ↑↓), живой превью, «В кровать» нельзя удалить.
+Функциональность:
+- ✅ Полноэкранный оверлей (z-index: 300)
+- ✅ Список шагов с эмодзи, названием и живым превью времени
+- ✅ Кнопки ↑↓ для перестановки порядка
+- ✅ Кнопка ✏ для редактирования (инлайн-форма)
+- ✅ Кнопка × для удаления (скрыта для isFixed шагов)
+- ✅ «В кровать» (isFixed: true) — нельзя удалить, нельзя менять offset
+- ✅ Добавление нового шага — вставляется перед «В кровать»
+- ✅ Ввод смещения: два select — часы (0–5) + минуты (0–55, шаг 5)
+- ✅ Кнопка «Сохранить» → вызывает onSave(steps)
+- ✅ Кнопка ✕ (закрыть) → вызывает onCancel
+- ✅ Реиндексация order при любом изменении
 
-**Ввод смещения:** два поля — часы (0–5) + минуты (0–55, шаг 5).
+### CSS (добавлено в style.css)
 
-**Инфраструктура:** добавить `<script>` в index.html, файл в sw.js ASSETS.
+Полный набор стилей для оверлея, списка, карточек, кнопок, формы редактирования, select-полей. Поддержка светлой темы.
 
-**Зависимости:** Разделы 1 (TimeUtils, PhaseEngine), 2 (DB).
+### Инфраструктура
+
+- index.html: `<script src="js/routineEditor.js">` (после db.js, перед form.js)
+- sw.js: v45 → v46, файл добавлен в ASSETS
+
+### Всё по плану, пропусков нет.
 
 ---
 
 ## Раздел 4. Визард настройки плана ✅ ВЫПОЛНЕН
 
-**Суть:** Полноэкранный оверлей — пошаговый визард из 6 шагов.
+**Статус:** реализован, закоммичен, запушен.
 
-**Создать:** `js/setupWizard.js`
+**Что сделано:**
 
-**Точка входа:** кнопка «Новый план» в настройках → ввод "новый план" → визард.
+### js/setupWizard.js — новый IIFE-модуль `SetupWizard`
 
-**6 шагов:**
-
+API:
 ```
-Шаг 1: currentWake (time picker, шаг 15 мин, дефолт 09:00)
-Шаг 2: targetWake (time picker, шаг 15 мин, дефолт 06:00)
-Шаг 3: stepMinutes (кнопки 15/20/30/45/60, без дефолта, живой превью фаз)
-Шаг 4: desiredSleepHours (кнопки 7/7.5/8/8.5/9, без дефолта)
-Шаг 5: распорядок (RoutineEditor из Раздела 3)
-Шаг 6: финальный превью (таблица фаз, кнопка «Начать»)
+SetupWizard.open({ onComplete })
+SetupWizard.close()
 ```
 
-**Валидация:** targetWake >= currentWake → ошибка. stepMinutes не выбран → Далее неактивна.
+6 шагов визарда:
+- ✅ Шаг 1: currentWake — select с 96 опциями (00:00–23:45, шаг 15 мин), дефолт 09:00
+- ✅ Шаг 2: targetWake — select, дефолт 06:00, валидация в реальном времени
+- ✅ Шаг 3: stepMinutes — 5 кнопок (15/20/30/45/60), без дефолта, живой превью (N фаз · N дней · финиш дата)
+- ✅ Шаг 4: desiredSleepHours — 5 кнопок (7/7.5/8/8.5/9), без дефолта
+- ✅ Шаг 5: распорядок — превью шагов с временами фазы 1 + кнопка «Редактировать» → RoutineEditor
+- ✅ Шаг 6: финальный превью — сводка (фазы, дни, старт, финиш) + таблица фаз с цветными точками
 
-**Инфраструктура:** добавить `<script>` в index.html, файл в sw.js ASSETS.
+Валидация:
+- ✅ targetWake >= currentWake → ошибка «Целевой подъём должен быть раньше текущего»
+- ✅ targetWake === currentWake → предупреждение «Ты уже на целевом режиме!»
+- ✅ stepMinutes не выбран → кнопка «Далее» disabled
+- ✅ desiredSleepHours не выбран → кнопка «Далее» disabled
 
-**Зависимости:** Разделы 1, 2, 3.
+Создание плана (кнопка «Начать»):
+- ✅ Архивация существующего активного плана
+- ✅ Расчёт фаз через PhaseEngine.calculatePhases()
+- ✅ Сохранение плана через DB.savePlan()
+- ✅ Сохранение шагов распорядка через DB.saveRoutineSteps()
+- ✅ Вызов onComplete callback
+
+Навигация:
+- ✅ Кнопки «Назад» / «Далее»
+- ✅ Кнопка ✕ (закрыть визард)
+- ✅ Индикатор «Шаг N из 6»
+
+Вспомогательные функции:
+- ✅ Форматирование дат на русском (formatDateRu, formatDateShort)
+- ✅ Склонение числительных (pluralize)
+
+### CSS (добавлено в style.css)
+
+Полный набор стилей: оверлей, заголовки, select, кнопки-опции, превью, таблица фаз, футер с навигацией. Поддержка светлой темы.
+
+### Инфраструктура
+
+- index.html: `<script src="js/setupWizard.js">` (после routineEditor.js, перед form.js)
+- sw.js: v46 → v47, файл добавлен в ASSETS
+
+### ⚠️ Нереализованные детали
+
+1. **Предупреждение о крайнем отбое** — по архитектуре (п. 4.4): «bed раньше 20:00 или позже 03:00 → предупреждение (не блок)». Не реализовано — нет проверки на крайние значения bed.
+2. **Валидация минимума шагов распорядка** — по архитектуре (п. 4.4): «Минимум 1 шаг в распорядке (кроме фиксированного "В кровать")». Не реализовано — пользователь может удалить все шаги кроме «В кровать» и пройти дальше.
 
 ---
 
 ## Раздел 5. Настройки — выезжающая панель ✅ ВЫПОЛНЕН
 
-**Суть:** Новый экран, заменяющий иконку версии на ⚙️.
+**Статус:** реализован, закоммичен, запушен.
 
-**Создать:** `js/settings.js`
+**Что сделано:**
 
-**UI:** выезжающая панель на весь экран с крестиком ✕.
+### js/settings.js — новый IIFE-модуль `Settings`
 
-**Содержание:**
-- Статус плана (Фаза N из M / нет плана)
-- Кнопка «Новый план» → ввод "новый план" → визард
-- Кнопка «Вечерний распорядок» → RoutineEditor
-- Кнопка «Сбросить план» → подтверждение → архивация
-- Версия приложения внизу
+API:
+```
+Settings.open()
+Settings.close()
+```
 
-**Модифицировать:** index.html (убрать `#app-version`), app.js (⚙️ вместо showVersion).
+Содержание панели:
+- ✅ Заголовок «Настройки» с кнопкой ✕ (закрыть)
+- ✅ Секция «Режим сна» с заголовком
+- ✅ Статус плана: «Фаза N из M» / «План завершён» / «Нет активного плана»
+- ✅ Подпись: «Цель: подъём HH:MM» (если есть план)
+- ✅ Кнопка «Новый план» → prompt ввода «новый план» → SetupWizard.open()
+- ✅ Кнопка «Вечерний распорядок» → загрузка шагов из DB → RoutineEditor.open()
+- ✅ Кнопка «Сбросить план» → confirm() → DB.updatePlanStatus(archived) → reload (видна только при активном плане)
+- ✅ Версия приложения внизу (загружается из sw.js)
 
-**Инфраструктура:** добавить `<script>` в index.html, файл в sw.js ASSETS.
+### Изменения в существующих файлах
 
-**Зависимости:** Разделы 1, 2, 3, 4 (визард).
+**index.html:**
+- ✅ `<span class="app-version" id="app-version">` заменён на `<button class="settings-btn" id="settings-btn">`
+
+**js/app.js:**
+- ✅ Функция `showVersion()` заменена на `setupSettingsButton()`
+- ✅ Кнопка ⚙️ вызывает `Settings.open()`
+
+### CSS (добавлено в style.css)
+
+- ✅ Стиль `.settings-btn` (круглая кнопка слева сверху, как theme-toggle)
+- ✅ Стили панели: overlay, header, section, status, buttons, version
+- ✅ Красный цвет для кнопки «Сбросить план»
+- ✅ Поддержка светлой темы
+
+### Инфраструктура
+
+- index.html: `<script src="js/settings.js">` (после setupWizard.js, перед form.js)
+- sw.js: v47 → v48, файл добавлен в ASSETS
+
+### ⚠️ Нереализованные детали
+
+1. **Ввод «новый план»** — используется браузерный `prompt()` вместо кастомного модального окна. Функционально работает, но визуально не соответствует стилю приложения.
 
 ---
 
