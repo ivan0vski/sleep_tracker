@@ -1,27 +1,9 @@
-function calcSleepDuration(fallAsleep, finalWake) {
-    if (!fallAsleep || !finalWake) return null;
-    const [h1, m1] = fallAsleep.split(':').map(Number);
-    const [h2, m2] = finalWake.split(':').map(Number);
-    let mins = (h2 * 60 + m2) - (h1 * 60 + m1);
-    if (mins <= 0) mins += 24 * 60;
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    return m > 0 ? `${h}ч ${m}мин` : `${h}ч`;
-}
-
 const App = (() => {
-    let currentDate = todayISO();
+    let currentDate = TimeUtils.todayISO();
 
     const TAB_ORDER = ['form', 'protocol', 'routine', 'instruction', 'history'];
     let currentIndex = 0;
     let container = null;
-
-    function todayISO() {
-        const d = new Date();
-        return d.getFullYear() + '-' +
-            String(d.getMonth() + 1).padStart(2, '0') + '-' +
-            String(d.getDate()).padStart(2, '0');
-    }
 
     function formatDateDisplay(isoDate) {
         const [y, m, d] = isoDate.split('-');
@@ -37,7 +19,7 @@ const App = (() => {
     function updateTodayButton() {
         const btn = document.getElementById('btn-today');
         if (btn) {
-            btn.classList.toggle('btn-today--hidden', currentDate === todayISO());
+            btn.classList.toggle('btn-today--hidden', currentDate === TimeUtils.todayISO());
         }
     }
 
@@ -220,7 +202,7 @@ const App = (() => {
         });
 
         document.getElementById('btn-today').addEventListener('click', () => {
-            setDate(todayISO());
+            setDate(TimeUtils.todayISO());
         });
     }
 

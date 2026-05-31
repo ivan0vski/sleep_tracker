@@ -1,5 +1,5 @@
 const SleepForm = (() => {
-    let currentDate = todayISO();
+    let currentDate = TimeUtils.todayISO();
     let formState = {};
     let isReadOnly = false;
 
@@ -17,13 +17,6 @@ const SleepForm = (() => {
         { key: 'daytimeMental', label: 'Самочувствие — душевное', type: 'rating' },
         { key: 'daytimePhysical', label: 'Самочувствие — физическое', type: 'rating' }
     ];
-
-    function todayISO() {
-        const d = new Date();
-        return d.getFullYear() + '-' +
-            String(d.getMonth() + 1).padStart(2, '0') + '-' +
-            String(d.getDate()).padStart(2, '0');
-    }
 
     function render() {
         const container = document.getElementById('form-view');
@@ -152,7 +145,7 @@ const SleepForm = (() => {
         const fallAsleep = document.getElementById('q-fallasleep').value;
         const finalWake = document.getElementById('q-finalwake').value;
         const el = document.getElementById('sleep-duration');
-        const dur = calcSleepDuration(fallAsleep, finalWake);
+        const dur = TimeUtils.formatDuration(fallAsleep, finalWake);
         el.textContent = dur ? `Сон: ${dur}` : '';
     }
 

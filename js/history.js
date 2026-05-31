@@ -52,7 +52,7 @@ const History = (() => {
         const parts = [];
         if (entry.fallAsleepTime && entry.finalWakeTime) {
             let timeRange = `${entry.fallAsleepTime} → ${entry.finalWakeTime}`;
-            const dur = calcSleepDuration(entry.fallAsleepTime, entry.finalWakeTime);
+            const dur = TimeUtils.formatDuration(entry.fallAsleepTime, entry.finalWakeTime);
             if (dur) timeRange += ` (${dur})`;
             parts.push(timeRange);
         }
@@ -68,7 +68,7 @@ const History = (() => {
         }
         if (entry.finalWakeTime) lines.push(`Проснулся: ${entry.finalWakeTime}`);
         if (entry.outOfBedTime) lines.push(`Встал: ${entry.outOfBedTime}`);
-        const dur = calcSleepDuration(entry.fallAsleepTime, entry.finalWakeTime);
+        const dur = TimeUtils.formatDuration(entry.fallAsleepTime, entry.finalWakeTime);
         if (dur) lines.push(`Сон: ${dur}`);
         if (entry.sleepQuality) lines.push(`Качество сна: ${entry.sleepQuality}/5`);
         if (entry.disturbances && entry.disturbances.length) lines.push(`Мешало: ${entry.disturbances.join(', ')}`);

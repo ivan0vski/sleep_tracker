@@ -1,5 +1,5 @@
 const Protocol = (() => {
-    let currentDate = todayISO();
+    let currentDate = TimeUtils.todayISO();
     let protocolState = {};
     let isReadOnly = false;
 
@@ -80,12 +80,6 @@ const Protocol = (() => {
 
     const ALL_KEYS = SECTIONS.flatMap(s => s.items.filter(i => i.type === 'check').map(i => i.key));
 
-    function todayISO() {
-        const d = new Date();
-        return d.getFullYear() + '-' +
-            String(d.getMonth() + 1).padStart(2, '0') + '-' +
-            String(d.getDate()).padStart(2, '0');
-    }
 
     function getCheckedCount() {
         return ALL_KEYS.filter(key => protocolState[key]).length;
