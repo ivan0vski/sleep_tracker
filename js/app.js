@@ -132,6 +132,7 @@ const App = (() => {
         SleepForm.setDate(currentDate);
         Protocol.setDate(currentDate);
         Routine.setDate(currentDate);
+        Instruction.setDate(currentDate);
         container.querySelectorAll('.view').forEach(v => v.scrollTop = 0);
     }
 
@@ -323,6 +324,8 @@ const App = (() => {
             renderPhaseLabel();
             Protocol.setPlan(activePlan);
             Routine.setPlan(activePlan);
+            Instruction.setPlan(activePlan);
+            checkPlanCompletion();
             SleepForm.render();
             Protocol.render();
             Routine.render();
@@ -349,6 +352,7 @@ const App = (() => {
         SleepForm.setDate(currentDate);
         Protocol.setDate(currentDate);
         Routine.setDate(currentDate);
+        Instruction.setDate(currentDate);
         container.querySelectorAll('.view').forEach(v => v.scrollTop = 0);
     }
 
@@ -356,8 +360,42 @@ const App = (() => {
         return loadActivePlan().then(() => {
             Protocol.setPlan(activePlan);
             Routine.setPlan(activePlan);
+            Instruction.setPlan(activePlan);
             renderPhaseBar();
             renderPhaseLabel();
+        });
+    }
+
+    function checkPlanCompletion() {
+        if (!activePlan || !activePlan.phases || !activePlan.phases.length) return;
+        const lastPhase = activePlan.phases[activePlan.phases.length - 1];
+        const today = TimeUtils.todayISO();
+        if (today <= lastPhase.endDate) return;
+
+        DB.updatePlanStatus(activePlan.id, 'completed').then(() => {
+            activePlan = null;
+            Protocol.setPlan(null);
+            Routine.setPlan(null);
+            Instruction.setPlan(null);
+            renderPhaseBar();
+            renderPhaseLabel();
+            showCompletionMessage();
+        });
+    }
+
+    function showCompletionMessage() {
+        const overlay = document.createElement('div');
+        overlay.className = 'completion-overlay';
+        overlay.innerHTML =
+            '<div class="completion-modal">' +
+                '<div class="completion-modal__icon">🎉</div>' +
+                '<div class="completion-modal__title">План завершён!</div>' +
+                '<div class="completion-modal__text">Ты достиг целевого подъёма. Продолжай в том же духе!</div>' +
+                '<button class="completion-modal__btn">Отлично</button>' +
+            '</div>';
+        document.body.appendChild(overlay);
+        overlay.querySelector('.completion-modal__btn').addEventListener('click', () => {
+            overlay.remove();
         });
     }
 
