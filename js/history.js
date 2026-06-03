@@ -1,8 +1,11 @@
 const History = (() => {
 
+    let activePlan = null;
+
     function render() {
         const container = document.getElementById('history-view');
-        DB.getAllEntries().then(entries => {
+        Promise.all([DB.getAllEntries(), DB.getActivePlan()]).then(([entries, plan]) => {
+            activePlan = plan;
             if (entries.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
@@ -12,20 +15,26 @@ const History = (() => {
                 `;
                 return;
             }
-            container.innerHTML = `<div class="history-list">${entries.map(renderItem).join('')}</div>`;
+            container.innerHTML = `<div class="history-list">${entries.map(e => renderItem(e, plan)).join('')}</div>`;
             bindEvents(container);
         });
     }
 
-    function renderItem(entry) {
+    function renderItem(entry, plan) {
+        const phaseInfo = getPhaseInfo(entry.date, plan);
+        const hitHTML = buildHitIndicator(entry, phaseInfo);
+        const phaseBadge = phaseInfo
+            ? `<span class="history-item__phase" style="color:${phaseInfo.phase.color}">фаза ${phaseInfo.phase.number} день ${phaseInfo.dayInPhase}</span>`
+            : '';
+
         let feelingText = '';
         if (entry.daytimeMental || entry.daytimePhysical) {
             const parts = [];
-            if (entry.daytimeMental) parts.push(`${entry.daytimeMental}`);
-            if (entry.daytimePhysical) parts.push(`${entry.daytimePhysical}`);
-            feelingText = parts.join('/') + '/5';
+            if (entry.daytimeMental) parts.push(entry.daytimeMental);
+            if (entry.daytimePhysical) parts.push(entry.daytimePhysical);
+            feelingText = parts.join(' ') + ' /5';
         } else if (entry.daytimeFeeling) {
-            feelingText = `${entry.daytimeFeeling}/5`;
+            feelingText = entry.daytimeFeeling + ' /5';
         }
 
         const summary = buildSummary(entry);
@@ -33,10 +42,13 @@ const History = (() => {
         return `
             <div class="history-item" data-date="${entry.date}">
                 <div class="history-item__header">
-                    <span class="history-item__date">${formatDate(entry.date)}${entry.closed ? '<span class="history-item__closed">закрыт</span>' : ''}</span>
-                    <span class="history-item__feeling">${feelingText}</span>
+                    <span class="history-item__date">${formatDate(entry.date)}${entry.closed ? '<span class="history-item__closed">закрыт</span>' : ''}${phaseBadge}</span>
+                    ${hitHTML}
                 </div>
-                <div class="history-item__summary">${summary}</div>
+                <div class="history-item__summary">
+                    <span>${summary}</span>
+                    ${feelingText ? `<span class="history-item__feeling">${feelingText}</span>` : ''}
+                </div>
                 <div class="history-item__details">
                     ${renderDetails(entry)}
                     <div class="history-item__actions">
@@ -46,6 +58,26 @@ const History = (() => {
                 </div>
             </div>
         `;
+    }
+
+    function getPhaseInfo(dateStr, plan) {
+        if (!plan || !plan.phases || !plan.phases.length) return null;
+        const phase = PhaseEngine.getPhaseForDate(plan.phases, dateStr);
+        if (!phase) return null;
+        const a = new Date(phase.startDate + 'T12:00:00');
+        const b = new Date(dateStr + 'T12:00:00');
+        const dayInPhase = Math.round((b - a) / 86400000) + 1;
+        return { phase, dayInPhase };
+    }
+
+    function buildHitIndicator(entry, phaseInfo) {
+        if (!phaseInfo || !entry.outOfBedTime) return '';
+        const diff = Math.abs(TimeUtils.diffMinutes(entry.outOfBedTime, phaseInfo.phase.wake));
+        const cross = diff > 720 ? 1440 - diff : diff;
+        if (cross <= 15) {
+            return '<span class="history-item__hit history-item__hit--ok">✓</span>';
+        }
+        return '<span class="history-item__hit history-item__hit--fail">✕</span>';
     }
 
     function buildSummary(entry) {
