@@ -24,6 +24,8 @@ const App = (() => {
         }
     }
 
+    let phaseBarEntries = {};
+
     function renderPhaseBar() {
         const wrap = document.getElementById('phase-bar-wrap');
         if (!activePlan || !activePlan.phases || !activePlan.phases.length) {
@@ -37,38 +39,49 @@ const App = (() => {
         const planStart = phases[0].startDate;
         const planEnd = phases[phases.length - 1].endDate;
         const totalDays = daysBetween(planStart, planEnd) + 1;
-        const selectedDayNum = daysBetween(planStart, currentDate);
+        const today = TimeUtils.todayISO();
 
-        const segmentsHTML = phases.map(p => {
-            const phaseDays = daysBetween(p.startDate, p.endDate) + 1;
-            const widthPct = (phaseDays / totalDays * 100).toFixed(2);
-            const isPast = currentDate > p.endDate;
-            const isCurrent = currentDate >= p.startDate && currentDate <= p.endDate;
-            const opacity = isPast || isCurrent ? '1' : '0.35';
-            return `<div class="phase-bar__seg" style="width:${widthPct}%;background:${p.color};opacity:${opacity}"></div>`;
-        }).join('');
+        let cellsHTML = '';
+        for (let i = 0; i < totalDays; i++) {
+            const dayDate = TimeUtils.addDays(planStart, i);
+            const phase = PhaseEngine.getPhaseForDate(phases, dayDate);
+            if (!phase) continue;
 
-        let markerPct = 0;
-        if (selectedDayNum < 0) {
-            markerPct = 0;
-        } else if (selectedDayNum >= totalDays) {
-            markerPct = 100;
-        } else {
-            markerPct = ((selectedDayNum + 0.5) / totalDays * 100);
+            const isSelected = dayDate === currentDate;
+            const isToday = dayDate === today;
+            const isPast = dayDate < today;
+
+            let cls = 'phase-bar__cell';
+            if (isSelected) cls += ' phase-bar__cell--selected';
+            if (isToday) cls += ' phase-bar__cell--today';
+
+            let icon = '';
+            if (isPast) {
+                const entry = phaseBarEntries[dayDate];
+                if (entry && entry.outOfBedTime) {
+                    const diff = Math.abs(TimeUtils.diffMinutes(entry.outOfBedTime, phase.wake));
+                    const crossMidnight = diff > 720 ? 1440 - diff : diff;
+                    icon = crossMidnight <= 15
+                        ? '<span class="phase-bar__icon phase-bar__icon--ok">✓</span>'
+                        : '<span class="phase-bar__icon phase-bar__icon--fail">✕</span>';
+                }
+            }
+
+            cellsHTML += `<div class="${cls}" style="background:${phase.color}" data-date="${dayDate}">${icon}</div>`;
         }
 
-        const currentPhase = PhaseEngine.getPhaseForDate(phases, currentDate);
-        const markerColor = currentPhase ? currentPhase.color : 'var(--text-primary)';
-        const markerVisible = selectedDayNum >= 0 && selectedDayNum < totalDays;
+        wrap.innerHTML = `<div class="phase-bar">${cellsHTML}</div>`;
+    }
 
-        wrap.innerHTML = `
-            <div class="phase-bar" id="phase-bar">
-                <div class="phase-bar__track">
-                    ${segmentsHTML}
-                </div>
-                <div class="phase-bar__marker" style="left:${markerPct}%;background:${markerColor};${markerVisible ? '' : 'display:none'}"></div>
-            </div>
-        `;
+    function loadPhaseBarEntries() {
+        if (!activePlan || !activePlan.phases || !activePlan.phases.length) {
+            phaseBarEntries = {};
+            return Promise.resolve();
+        }
+        return DB.getAllEntries().then(entries => {
+            phaseBarEntries = {};
+            entries.forEach(e => { phaseBarEntries[e.date] = e; });
+        });
     }
 
     function renderPhaseLabel() {
@@ -86,10 +99,11 @@ const App = (() => {
             return;
         }
 
+        const dayInPhase = daysBetween(phase.startDate, currentDate) + 1;
         el.style.display = '';
         el.innerHTML = `
             <span class="phase-label__dot" style="background:${phase.color}"></span>
-            <span class="phase-label__text">Фаза ${phase.number} · подъём ${phase.wake} · отбой ${phase.bed}</span>
+            <span class="phase-label__text">Фаза ${phase.number} · день ${dayInPhase} · подъём ${phase.wake} · отбой ${phase.bed}</span>
         `;
     }
 
@@ -281,10 +295,6 @@ const App = (() => {
             PhaseCalendar.open(activePlan, currentDate);
         });
 
-        document.getElementById('phase-bar-wrap').addEventListener('click', () => {
-            PhaseCalendar.open(activePlan, currentDate);
-        });
-
         document.getElementById('btn-today').addEventListener('click', () => {
             setDate(TimeUtils.todayISO());
         });
@@ -303,6 +313,8 @@ const App = (() => {
         container = document.getElementById('swipe-container');
         DB.open().then(() => {
             return loadActivePlan();
+        }).then(() => {
+            return loadPhaseBarEntries();
         }).then(() => {
             updateDateDisplay();
             renderPhaseBar();

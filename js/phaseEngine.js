@@ -1,8 +1,8 @@
 const PhaseEngine = (() => {
 
     const PHASE_COLORS = [
-        '#EF4444', '#F97316', '#EAB308', '#84CC16',
-        '#22C55E', '#10B981', '#06B6D4', '#8B5CF6'
+        '#5B7B95', '#7A8B58', '#8A6384', '#A09350',
+        '#4B8585', '#6B5545'
     ];
 
     const DEFAULTS = {

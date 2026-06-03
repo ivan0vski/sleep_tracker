@@ -1643,34 +1643,51 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 
 .phase-bar {
-    position: relative;
-    padding: 6px 0;
-    cursor: pointer;
-    touch-action: manipulation;
-}
-
-.phase-bar__track {
     display: flex;
-    height: 6px;
+    flex-wrap: wrap;
+    gap: 3px;
+    justify-content: center;
+    padding: 4px 0;
+}
+
+.phase-bar__cell {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform var(--transition);
+}
+
+.phase-bar__cell--selected {
+    transform: scale(1.6);
+    z-index: 1;
     border-radius: 3px;
-    overflow: hidden;
 }
 
-.phase-bar__seg {
-    height: 100%;
-    transition: opacity var(--transition);
+.phase-bar__cell--today {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
 }
 
-.phase-bar__marker {
-    position: absolute;
-    top: 1px;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    border: 2px solid var(--bg-primary);
-    transform: translateX(-50%);
-    transition: left 0.3s ease;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+.phase-bar__icon {
+    font-size: 7px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.phase-bar__cell--selected .phase-bar__icon {
+    font-size: 6px;
+}
+
+.phase-bar__icon--ok {
+    color: #fff;
+}
+
+.phase-bar__icon--fail {
+    color: #fff;
 }
 
 /* Phase Label */
