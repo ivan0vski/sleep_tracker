@@ -65,7 +65,7 @@ const Settings = (() => {
                 close();
                 SetupWizard.open({
                     onComplete: function () {
-                        window.location.reload();
+                        App.refreshPlan();
                     }
                 });
             }
@@ -97,7 +97,8 @@ const Settings = (() => {
             resetBtn.addEventListener('click', function () {
                 if (confirm('Сбросить текущий план? Данные будут сохранены в архиве.')) {
                     DB.updatePlanStatus(plan.id, 'archived').then(function () {
-                        window.location.reload();
+                        App.refreshPlan();
+                        close();
                     });
                 }
             });

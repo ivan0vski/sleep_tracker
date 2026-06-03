@@ -1,5 +1,6 @@
 const App = (() => {
     let currentDate = TimeUtils.todayISO();
+    let activePlan = null;
 
     const TAB_ORDER = ['form', 'protocol', 'routine', 'instruction', 'history'];
     let currentIndex = 0;
@@ -23,6 +24,87 @@ const App = (() => {
         }
     }
 
+    function renderPhaseBar() {
+        const wrap = document.getElementById('phase-bar-wrap');
+        if (!activePlan || !activePlan.phases || !activePlan.phases.length) {
+            wrap.innerHTML = '';
+            wrap.style.display = 'none';
+            return;
+        }
+        wrap.style.display = '';
+
+        const phases = activePlan.phases;
+        const planStart = phases[0].startDate;
+        const planEnd = phases[phases.length - 1].endDate;
+        const totalDays = daysBetween(planStart, planEnd) + 1;
+        const selectedDayNum = daysBetween(planStart, currentDate);
+
+        const segmentsHTML = phases.map(p => {
+            const phaseDays = daysBetween(p.startDate, p.endDate) + 1;
+            const widthPct = (phaseDays / totalDays * 100).toFixed(2);
+            const isPast = currentDate > p.endDate;
+            const isCurrent = currentDate >= p.startDate && currentDate <= p.endDate;
+            const opacity = isPast || isCurrent ? '1' : '0.35';
+            return `<div class="phase-bar__seg" style="width:${widthPct}%;background:${p.color};opacity:${opacity}"></div>`;
+        }).join('');
+
+        let markerPct = 0;
+        if (selectedDayNum < 0) {
+            markerPct = 0;
+        } else if (selectedDayNum >= totalDays) {
+            markerPct = 100;
+        } else {
+            markerPct = ((selectedDayNum + 0.5) / totalDays * 100);
+        }
+
+        const currentPhase = PhaseEngine.getPhaseForDate(phases, currentDate);
+        const markerColor = currentPhase ? currentPhase.color : 'var(--text-primary)';
+        const markerVisible = selectedDayNum >= 0 && selectedDayNum < totalDays;
+
+        wrap.innerHTML = `
+            <div class="phase-bar" id="phase-bar">
+                <div class="phase-bar__track">
+                    ${segmentsHTML}
+                </div>
+                <div class="phase-bar__marker" style="left:${markerPct}%;background:${markerColor};${markerVisible ? '' : 'display:none'}"></div>
+            </div>
+        `;
+    }
+
+    function renderPhaseLabel() {
+        const el = document.getElementById('phase-label');
+        if (!activePlan || !activePlan.phases || !activePlan.phases.length) {
+            el.innerHTML = '';
+            el.style.display = 'none';
+            return;
+        }
+
+        const phase = PhaseEngine.getPhaseForDate(activePlan.phases, currentDate);
+        if (!phase) {
+            el.innerHTML = '';
+            el.style.display = 'none';
+            return;
+        }
+
+        el.style.display = '';
+        el.innerHTML = `
+            <span class="phase-label__dot" style="background:${phase.color}"></span>
+            <span class="phase-label__text">Фаза ${phase.number} · подъём ${phase.wake} · отбой ${phase.bed}</span>
+        `;
+    }
+
+    function daysBetween(isoA, isoB) {
+        const a = new Date(isoA + 'T12:00:00');
+        const b = new Date(isoB + 'T12:00:00');
+        return Math.round((b - a) / 86400000);
+    }
+
+    function loadActivePlan() {
+        return DB.getActivePlan().then(plan => {
+            activePlan = plan;
+        });
+    }
+
     function shiftDate(offset) {
         const d = new Date(currentDate + 'T12:00:00');
         d.setDate(d.getDate() + offset);
@@ -30,6 +112,8 @@ const App = (() => {
             String(d.getMonth() + 1).padStart(2, '0') + '-' +
             String(d.getDate()).padStart(2, '0');
         updateDateDisplay();
+        renderPhaseBar();
+        renderPhaseLabel();
         SleepForm.setDate(currentDate);
         Protocol.setDate(currentDate);
         container.querySelectorAll('.view').forEach(v => v.scrollTop = 0);
@@ -193,11 +277,12 @@ const App = (() => {
         document.getElementById('date-prev').addEventListener('click', () => shiftDate(-1));
         document.getElementById('date-next').addEventListener('click', () => shiftDate(1));
 
-        const picker = document.getElementById('date-picker');
-        picker.addEventListener('focus', () => { picker.value = currentDate; });
-        picker.addEventListener('change', () => {
-            if (picker.value) setDate(picker.value);
-            picker.blur();
+        document.getElementById('date-display').addEventListener('click', () => {
+            PhaseCalendar.open(activePlan, currentDate);
+        });
+
+        document.getElementById('phase-bar-wrap').addEventListener('click', () => {
+            PhaseCalendar.open(activePlan, currentDate);
         });
 
         document.getElementById('btn-today').addEventListener('click', () => {
@@ -217,7 +302,11 @@ const App = (() => {
         setupSettingsButton();
         container = document.getElementById('swipe-container');
         DB.open().then(() => {
+            return loadActivePlan();
+        }).then(() => {
             updateDateDisplay();
+            renderPhaseBar();
+            renderPhaseLabel();
             SleepForm.render();
             Protocol.render();
             Routine.render();
@@ -239,10 +328,19 @@ const App = (() => {
     function setDate(isoDate) {
         currentDate = isoDate;
         updateDateDisplay();
+        renderPhaseBar();
+        renderPhaseLabel();
         SleepForm.setDate(currentDate);
         Protocol.setDate(currentDate);
         container.querySelectorAll('.view').forEach(v => v.scrollTop = 0);
     }
 
-    return { switchTab, advanceDate, setDate };
+    function refreshPlan() {
+        return loadActivePlan().then(() => {
+            renderPhaseBar();
+            renderPhaseLabel();
+        });
+    }
+
+    return { switchTab, advanceDate, setDate, refreshPlan };
 })();

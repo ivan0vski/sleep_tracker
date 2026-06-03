@@ -22,15 +22,14 @@
                 <h1 class="header__title">Sleep Tracker</h1>
                 <button class="theme-toggle" id="theme-toggle" aria-label="Сменить тему"></button>
             </div>
+            <div class="phase-bar-wrap" id="phase-bar-wrap"></div>
             <div class="date-selector" id="global-date-selector">
                 <button class="btn-today" id="btn-today">Today</button>
                 <button class="date-selector__btn" id="date-prev">&larr;</button>
-                <span class="date-selector__date-wrap">
-                    <span class="date-selector__date" id="date-display"></span>
-                    <input type="date" id="date-picker">
-                </span>
+                <span class="date-selector__date" id="date-display"></span>
                 <button class="date-selector__btn" id="date-next">&rarr;</button>
             </div>
+            <div class="phase-label" id="phase-label"></div>
             <nav class="header__nav">
                 <button class="tab tab--active" data-tab="form">Трекер</button>
                 <button class="tab" data-tab="protocol">Протокол</button>
@@ -55,6 +54,7 @@
 
     <script src="js/timeUtils.js"></script>
     <script src="js/phaseEngine.js"></script>
+    <script src="js/phaseCalendar.js"></script>
     <script src="js/db.js"></script>
     <script src="js/routineEditor.js"></script>
     <script src="js/setupWizard.js"></script>
