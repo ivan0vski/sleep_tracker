@@ -2,6 +2,7 @@ const SleepForm = (() => {
     let currentDate = TimeUtils.todayISO();
     let formState = {};
     let isReadOnly = false;
+    let activePlan = null;
 
     const DISTURBANCE_TAGS = ['шум', 'свет', 'температура', 'тревога', 'боль', 'партнёр', 'другое'];
     const FACTOR_TAGS = ['кофеин', 'алкоголь', 'спорт', 'экран', 'стресс', 'тяжёлая еда', 'другое'];
@@ -18,11 +19,50 @@ const SleepForm = (() => {
         { key: 'daytimePhysical', label: 'Самочувствие — физическое', type: 'rating' }
     ];
 
+    function getPhaseForCurrentDate() {
+        if (!activePlan || !activePlan.phases || !activePlan.phases.length) return null;
+        return PhaseEngine.getPhaseForDate(activePlan.phases, currentDate);
+    }
+
+    function buildHitHTML(actualTime, targetTime, mode) {
+        if (!actualTime || !targetTime) return '';
+        const diff = TimeUtils.diffMinutes(actualTime, targetTime);
+        const cross = diff > 720 ? 1440 - diff : diff;
+        if (mode === 'wake') {
+            // diff <= 15: overslept by at most 15 min → ✓
+            // diff > 720: woke earlier than target → ✓
+            if (diff <= 15 || diff > 720) {
+                return '<span class="form-hit form-hit--ok">✓</span>';
+            }
+            return '<span class="form-hit form-hit--fail">✕</span>';
+        }
+        if (cross <= 15) return '<span class="form-hit form-hit--ok">✓</span>';
+        return '<span class="form-hit form-hit--fail">✕</span>';
+    }
+
+    function updateHitIndicators() {
+        const phase = getPhaseForCurrentDate();
+        const bedHit = document.getElementById('hit-bedtime');
+        const wakeHit = document.getElementById('hit-finalwake');
+        if (!phase) {
+            if (bedHit) bedHit.innerHTML = '';
+            if (wakeHit) wakeHit.innerHTML = '';
+            return;
+        }
+        const bedVal = document.getElementById('q-bedtime').value;
+        const wakeVal = document.getElementById('q-finalwake').value;
+        if (bedHit) bedHit.innerHTML = buildHitHTML(bedVal, phase.bed, 'bed');
+        if (wakeHit) wakeHit.innerHTML = buildHitHTML(wakeVal, phase.wake, 'wake');
+    }
+
     function render() {
         const container = document.getElementById('form-view');
         container.innerHTML = `
             <div class="card">
-                <div class="card__title">Во сколько лёг в кровать?</div>
+                <div class="card__title-row">
+                    <div class="card__title">Во сколько лёг в кровать?</div>
+                    <span class="form-hit-wrap" id="hit-bedtime"></span>
+                </div>
                 <input type="time" id="q-bedtime" value="${formState.bedTime || ''}">
                 <div class="time-date-hint" id="hint-bedtime"></div>
             </div>
@@ -52,13 +92,23 @@ const SleepForm = (() => {
                 </div>
             </div>
             <div class="card">
-                <div class="card__title">Во сколько проснулся окончательно?</div>
+                <div class="card__title-row">
+                    <div class="card__title">Во сколько проснулся окончательно?</div>
+                    <span class="form-hit-wrap" id="hit-finalwake"></span>
+                </div>
                 <input type="time" id="q-finalwake" value="${formState.finalWakeTime || ''}">
                 <div class="sleep-duration" id="sleep-duration"></div>
             </div>
             <div class="card">
                 <div class="card__title">Во сколько встал с кровати?</div>
                 <input type="time" id="q-outofbed" value="${formState.outOfBedTime || ''}">
+                <div class="quick-time" id="quick-time-outofbed">
+                    <span class="quick-time__label">Через</span>
+                    <button class="quick-time__btn" data-offset="10">10</button>
+                    <button class="quick-time__btn" data-offset="15">15</button>
+                    <button class="quick-time__btn" data-offset="20">20</button>
+                    <span class="quick-time__label">минут</span>
+                </div>
             </div>
             <div class="card">
                 <div class="card__title">Качество сна</div>
@@ -133,6 +183,38 @@ const SleepForm = (() => {
         if (el2) el2.textContent = getHintDate(document.getElementById('q-fallasleep').value);
     }
 
+    function updateQuickTimeActive() {
+        const bedVal = document.getElementById('q-bedtime').value;
+        const fallAsleepVal = document.getElementById('q-fallasleep').value;
+        const quickFall = document.getElementById('quick-time');
+        if (quickFall) {
+            quickFall.querySelectorAll('.quick-time__btn').forEach(btn => {
+                btn.classList.remove('quick-time__btn--active');
+                if (bedVal && fallAsleepVal) {
+                    const [bh, bm] = bedVal.split(':').map(Number);
+                    const [fh, fm] = fallAsleepVal.split(':').map(Number);
+                    const diff = ((fh * 60 + fm) - (bh * 60 + bm) + 1440) % 1440;
+                    if (diff === parseInt(btn.dataset.offset)) btn.classList.add('quick-time__btn--active');
+                }
+            });
+        }
+
+        const wakeVal = document.getElementById('q-finalwake').value;
+        const outVal = document.getElementById('q-outofbed').value;
+        const quickOut = document.getElementById('quick-time-outofbed');
+        if (quickOut) {
+            quickOut.querySelectorAll('.quick-time__btn').forEach(btn => {
+                btn.classList.remove('quick-time__btn--active');
+                if (wakeVal && outVal) {
+                    const [wh, wm] = wakeVal.split(':').map(Number);
+                    const [oh, om] = outVal.split(':').map(Number);
+                    const diff = ((oh * 60 + om) - (wh * 60 + wm) + 1440) % 1440;
+                    if (diff === parseInt(btn.dataset.offset)) btn.classList.add('quick-time__btn--active');
+                }
+            });
+        }
+    }
+
     let saveTimer = null;
 
     function scheduleAutoSave() {
@@ -158,6 +240,13 @@ const SleepForm = (() => {
                 }
                 if (input.id === 'q-bedtime' || input.id === 'q-fallasleep') {
                     updateDateHints();
+                }
+                if (input.id === 'q-bedtime' || input.id === 'q-finalwake') {
+                    updateHitIndicators();
+                    updateQuickTimeActive();
+                }
+                if (input.id === 'q-outofbed') {
+                    updateQuickTimeActive();
                 }
             });
         });
@@ -206,6 +295,23 @@ const SleepForm = (() => {
             document.getElementById('q-fallasleep').value = val;
             updateSleepDuration();
             updateDateHints();
+            updateQuickTimeActive();
+            scheduleAutoSave();
+        });
+
+        document.getElementById('quick-time-outofbed').addEventListener('click', (e) => {
+            if (isReadOnly) return;
+            const btn = e.target.closest('.quick-time__btn');
+            if (!btn) return;
+            const wakeTime = document.getElementById('q-finalwake').value;
+            if (!wakeTime) return;
+            const [h, m] = wakeTime.split(':').map(Number);
+            const total = h * 60 + m + parseInt(btn.dataset.offset);
+            const newH = Math.floor(total / 60) % 24;
+            const newM = total % 60;
+            const val = String(newH).padStart(2, '0') + ':' + String(newM).padStart(2, '0');
+            document.getElementById('q-outofbed').value = val;
+            updateQuickTimeActive();
             scheduleAutoSave();
         });
 
@@ -300,6 +406,8 @@ const SleepForm = (() => {
             }
             updateSleepDuration();
             updateDateHints();
+            updateHitIndicators();
+            updateQuickTimeActive();
             isReadOnly = !!(entry && entry.closed);
             applyReadOnlyState();
         });
@@ -542,5 +650,9 @@ const SleepForm = (() => {
         render();
     }
 
-    return { render, setDate };
+    function setPlan(plan) {
+        activePlan = plan;
+    }
+
+    return { render, setDate, setPlan };
 })();

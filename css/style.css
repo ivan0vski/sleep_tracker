@@ -234,6 +234,31 @@ body::-webkit-scrollbar,
     margin-bottom: 12px;
 }
 
+.card__title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.card__title-row .card__title {
+    margin-bottom: 0;
+}
+
+.form-hit {
+    font-size: 16px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.form-hit--ok {
+    color: var(--success);
+}
+
+.form-hit--fail {
+    color: #ff6b6b;
+}
+
 /* Time inputs */
 input[type="time"],
 input[type="number"] {
@@ -307,6 +332,11 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 
 .quick-time__btn:active {
+    background: var(--accent);
+    color: #fff;
+}
+
+.quick-time__btn--active {
     background: var(--accent);
     color: #fff;
 }

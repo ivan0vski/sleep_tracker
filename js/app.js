@@ -322,6 +322,7 @@ const App = (() => {
             updateDateDisplay();
             renderPhaseBar();
             renderPhaseLabel();
+            SleepForm.setPlan(activePlan);
             Protocol.setPlan(activePlan);
             Routine.setPlan(activePlan);
             Instruction.setPlan(activePlan);
@@ -358,6 +359,7 @@ const App = (() => {
 
     function refreshPlan() {
         return loadActivePlan().then(() => {
+            SleepForm.setPlan(activePlan);
             Protocol.setPlan(activePlan);
             Routine.setPlan(activePlan);
             Instruction.setPlan(activePlan);
@@ -374,6 +376,7 @@ const App = (() => {
 
         DB.updatePlanStatus(activePlan.id, 'completed').then(() => {
             activePlan = null;
+            SleepForm.setPlan(null);
             Protocol.setPlan(null);
             Routine.setPlan(null);
             Instruction.setPlan(null);
