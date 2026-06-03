@@ -320,6 +320,7 @@ const App = (() => {
             updateDateDisplay();
             renderPhaseBar();
             renderPhaseLabel();
+            Protocol.setPlan(activePlan);
             SleepForm.render();
             Protocol.render();
             Routine.render();
@@ -350,6 +351,7 @@ const App = (() => {
 
     function refreshPlan() {
         return loadActivePlan().then(() => {
+            Protocol.setPlan(activePlan);
             renderPhaseBar();
             renderPhaseLabel();
         });

@@ -2,83 +2,110 @@ const Protocol = (() => {
     let currentDate = TimeUtils.todayISO();
     let protocolState = {};
     let isReadOnly = false;
+    let activePlan = null;
 
-    const SECTIONS = [
-        {
-            id: 'morning',
-            title: '☀️ Подъём — 6:00',
-            items: [
-                { type: 'hint', text: 'Подъём в 6:00, 7 дней в неделю. Будильник не переносить' },
-                { type: 'check', key: 'morningTracker', label: 'Заполнить утренний трекер' },
-                { type: 'check', key: 'morningLight', label: 'Выход на яркий уличный свет — 10–20 мин в первые 60 мин после подъёма' }
-            ]
-        },
-        {
-            id: 'firstHalf',
-            title: '🌤 Первая половина дня — 6:30–12:00',
-            items: [
-                { type: 'hint', text: 'Максимум естественного света, особенно до 12:00' },
-                { type: 'check', key: 'caffeineBeforeNoon', label: 'Кофе / чай / шоколад — только до 12:00' }
-            ]
-        },
-        {
-            id: 'day',
-            title: '🕐 День — 12:00–17:00',
-            items: [
-                { type: 'check', key: 'noDaytimeSleep', label: 'Никакого дневного сна' },
-                { type: 'hint', text: 'Таймер в 15:00 — напоминание, сколько осталось до сна' },
-                { type: 'hint', text: '70–80% дневной нормы воды выпить до 17:00' },
-                { type: 'hint', text: 'Уставать днём максимально сильно' },
-                { type: 'check', key: 'exerciseBefore17', label: 'интенсивные тренировки до 17:00' }
-            ]
-        },
-        {
-            id: 'evening',
-            title: '🏠 Вечер: переход — 17:00–19:15',
-            items: [
-                { type: 'hint', text: 'Уведомление 18:25 «ехать домой». В 18:30 — такси. Дома к 19:00' },
-                { type: 'check', key: 'screensOff', label: 'Экраны выключить к 19:15' },
-                { type: 'check', key: 'lastMeal', label: 'Последний приём пищи не позже 19:40' },
-                { type: 'hint', text: 'не больше 200 мл воды после ужина' }
-            ]
-        },
-        {
-            id: 'bedPrep',
-            title: '🌙 Подготовка ко сну — 19:15–21:10',
-            items: [
-                { type: 'hint', text: 'После 20:00 — приглушённый свет тёплого спектра (1800–2200 K)' },
-                { type: 'check', key: 'noPhysicalLoad', label: 'Никакой физической нагрузки, умственная — минимум' },
-                { type: 'check', key: 'warmShower', label: 'Тёплый (не горячий) душ' },
-                { type: 'hint', text: 'Проветрить комнату, довести до 18,3 °C' },
-                { type: 'hint', text: 'Абсолютная темнота: блэкаут-шторы, заклеить LED техники, убрать свет из коридора' },
-                { type: 'hint', text: 'Тишина, шумоизоляция' },
-                { type: 'hint', text: 'Меньше часа до сна — не пить вообще' },
-                { type: 'check', key: 'toiletBeforeBed', label: 'Туалет перед укладыванием' }
-            ]
-        }
+    const ALL_KEYS = [
+        'morningTracker', 'morningLight', 'caffeineBeforeNoon',
+        'noDaytimeSleep', 'exerciseBefore17', 'screensOff',
+        'lastMeal', 'noPhysicalLoad', 'warmShower', 'toiletBeforeBed'
     ];
 
-    const TEXT_SECTIONS = [
-        {
-            title: '😴 Отбой — 21:10',
-            lines: [
-                'В кровати ровно в 21:10. Не раньше',
-                'Выбрал позу — не двигаться',
-                'Не пытаться заснуть. Просто чилить, не заснул — ладно'
-            ]
-        },
-        {
-            title: 'Постоянные правила',
-            lines: [
-                'Кровать только для сна. Днём не есть, не смотреть видео в кровати',
-                'Ванная и квартира ночью — только красные тусклые лампы',
-                'Заполнять трекер 14 дней подряд без пропусков',
-                'Если SE < 85% — чек протокол. начать лечение'
-            ]
-        }
-    ];
+    function getContext() {
+        return PhaseEngine.getDayContext(activePlan, null, currentDate);
+    }
 
-    const ALL_KEYS = SECTIONS.flatMap(s => s.items.filter(i => i.type === 'check').map(i => i.key));
+    function buildSections(ctx) {
+        const p = ctx.protocol;
+        const wake = ctx.wake;
+        const bed = ctx.bed;
+        const wakePlus30 = TimeUtils.addMinutes(wake, 30);
+        const afternoonReminder = TimeUtils.addMinutes(wake, 540);
+        const goHomeNotify = TimeUtils.addMinutes(bed, -165);
+        const taxiTime = TimeUtils.addMinutes(bed, -160);
+        const homeBy = TimeUtils.addMinutes(bed, -130);
+        const dimLights = TimeUtils.addMinutes(bed, -70);
+
+        return [
+            {
+                id: 'morning',
+                title: `☀️ Подъём — ${wake}`,
+                items: [
+                    { type: 'hint', text: `Подъём в ${wake}, 7 дней в неделю. Будильник не переносить` },
+                    { type: 'check', key: 'morningTracker', label: 'Заполнить утренний трекер' },
+                    { type: 'check', key: 'morningLight', label: 'Выход на яркий уличный свет — 10–20 мин в первые 60 мин после подъёма' }
+                ]
+            },
+            {
+                id: 'firstHalf',
+                title: `🌤 Первая половина дня — ${wakePlus30}–${p.caffeineUntil}`,
+                items: [
+                    { type: 'hint', text: `Максимум естественного света, особенно до ${p.caffeineUntil}` },
+                    { type: 'check', key: 'caffeineBeforeNoon', label: `Кофе / чай / шоколад — только до ${p.caffeineUntil}` }
+                ]
+            },
+            {
+                id: 'day',
+                title: `🕐 День — ${p.caffeineUntil}–${p.trainingUntil}`,
+                items: [
+                    { type: 'check', key: 'noDaytimeSleep', label: 'Никакого дневного сна' },
+                    { type: 'hint', text: `Таймер в ${afternoonReminder} — напоминание, сколько осталось до сна` },
+                    { type: 'hint', text: `70–80% дневной нормы воды выпить до ${p.trainingUntil}` },
+                    { type: 'hint', text: 'Уставать днём максимально сильно' },
+                    { type: 'check', key: 'exerciseBefore17', label: `интенсивные тренировки до ${p.trainingUntil}` }
+                ]
+            },
+            {
+                id: 'evening',
+                title: `🏠 Вечер: переход — ${p.trainingUntil}–${p.screensOff}`,
+                items: [
+                    { type: 'hint', text: `Уведомление ${goHomeNotify} «ехать домой». В ${taxiTime} — такси. Дома к ${homeBy}` },
+                    { type: 'check', key: 'screensOff', label: `Экраны выключить к ${p.screensOff}` },
+                    { type: 'check', key: 'lastMeal', label: `Последний приём пищи не позже ${p.lastMeal}` },
+                    { type: 'hint', text: 'не больше 200 мл воды после ужина' }
+                ]
+            },
+            {
+                id: 'bedPrep',
+                title: `🌙 Подготовка ко сну — ${p.screensOff}–${bed}`,
+                items: [
+                    { type: 'hint', text: `После ${dimLights} — приглушённый свет тёплого спектра (1800–2200 K)` },
+                    { type: 'check', key: 'noPhysicalLoad', label: 'Никакой физической нагрузки, умственная — минимум' },
+                    { type: 'check', key: 'warmShower', label: 'Тёплый (не горячий) душ' },
+                    { type: 'hint', text: 'Проветрить комнату, довести до 18,3 °C' },
+                    { type: 'hint', text: 'Абсолютная темнота: блэкаут-шторы, заклеить LED техники, убрать свет из коридора' },
+                    { type: 'hint', text: 'Тишина, шумоизоляция' },
+                    { type: 'hint', text: 'Меньше часа до сна — не пить вообще' },
+                    { type: 'check', key: 'toiletBeforeBed', label: 'Туалет перед укладыванием' }
+                ]
+            }
+        ];
+    }
+
+    function buildTextSections(ctx) {
+        return [
+            {
+                title: `😴 Отбой — ${ctx.bed}`,
+                lines: [
+                    `В кровати ровно в ${ctx.bed}. Не раньше`,
+                    'Выбрал позу — не двигаться',
+                    'Не пытаться заснуть. Просто чилить, не заснул — ладно'
+                ]
+            },
+            {
+                title: 'Постоянные правила',
+                lines: [
+                    'Кровать только для сна. Днём не есть, не смотреть видео в кровати',
+                    'Ванная и квартира ночью — только красные тусклые лампы',
+                    'Заполнять трекер 14 дней подряд без пропусков',
+                    'Если SE < 85% — чек протокол. начать лечение'
+                ]
+            }
+        ];
+    }
+
+    function setPlan(plan) {
+        activePlan = plan;
+    }
 
 
     function getCheckedCount() {
@@ -87,8 +114,11 @@ const Protocol = (() => {
 
     function render() {
         const container = document.getElementById('protocol-view');
+        const ctx = getContext();
+        const sections = buildSections(ctx);
+        const textSections = buildTextSections(ctx);
 
-        const sectionsHTML = SECTIONS.map(section => {
+        const sectionsHTML = sections.map(section => {
             const itemsHTML = section.items.map(item => {
                 if (item.type === 'check') {
                     return `
@@ -110,7 +140,7 @@ const Protocol = (() => {
             `;
         }).join('');
 
-        const textSectionsHTML = TEXT_SECTIONS.map(section => {
+        const textSectionsHTML = textSections.map(section => {
             const linesHTML = section.lines.map(line =>
                 `<div class="protocol-hint">${line}</div>`
             ).join('');
@@ -235,9 +265,11 @@ const Protocol = (() => {
     }
 
     function getIncomplete(date) {
+        const ctx = PhaseEngine.getDayContext(activePlan, null, date);
+        const sections = buildSections(ctx);
         return DB.getEntry(date).then(entry => {
             const protocol = (entry && entry.protocol) || {};
-            return SECTIONS.flatMap(s =>
+            return sections.flatMap(s =>
                 s.items.filter(i => i.type === 'check' && !protocol[i.key])
                     .map(i => ({ key: i.key, label: i.label }))
             );
@@ -255,5 +287,5 @@ const Protocol = (() => {
         });
     }
 
-    return { render, setDate, getIncomplete, saveChecks };
+    return { render, setDate, setPlan, getIncomplete, saveChecks };
 })();
