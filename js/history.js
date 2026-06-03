@@ -71,8 +71,8 @@ const History = (() => {
     }
 
     function buildHitIndicator(entry, phaseInfo) {
-        if (!phaseInfo || !entry.outOfBedTime) return '';
-        const diff = Math.abs(TimeUtils.diffMinutes(entry.outOfBedTime, phaseInfo.phase.wake));
+        if (!phaseInfo || !entry.finalWakeTime) return '';
+        const diff = Math.abs(TimeUtils.diffMinutes(entry.finalWakeTime, phaseInfo.phase.wake));
         const cross = diff > 720 ? 1440 - diff : diff;
         if (cross <= 15) {
             return '<span class="history-item__hit history-item__hit--ok">✓</span>';

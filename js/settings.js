@@ -170,8 +170,8 @@ const Settings = (() => {
                 var icon = '';
                 if (isPast) {
                     var entry = entries[dayDate];
-                    if (entry && entry.outOfBedTime) {
-                        var diff = Math.abs(TimeUtils.diffMinutes(entry.outOfBedTime, p.wake));
+                    if (entry && entry.finalWakeTime) {
+                        var diff = Math.abs(TimeUtils.diffMinutes(entry.finalWakeTime, p.wake));
                         var cross = diff > 720 ? 1440 - diff : diff;
                         icon = cross <= 15 ? '✓' : '✕';
                         cls += cross <= 15 ? ' plan-detail__cell--ok' : ' plan-detail__cell--fail';
@@ -216,9 +216,9 @@ const Settings = (() => {
                 var dayDate = TimeUtils.addDays(p.startDate, d);
                 if (dayDate >= today) continue;
                 var entry = entries[dayDate];
-                if (entry && entry.outOfBedTime) {
+                if (entry && entry.finalWakeTime) {
                     totalTracked++;
-                    var rawDiff = TimeUtils.diffMinutes(entry.outOfBedTime, p.wake);
+                    var rawDiff = TimeUtils.diffMinutes(entry.finalWakeTime, p.wake);
                     var signedDiff = rawDiff > 720 ? rawDiff - 1440 : rawDiff;
                     totalDiff += signedDiff;
                     var absDiff = Math.abs(signedDiff);

@@ -59,8 +59,8 @@ const App = (() => {
             let icon = '';
             if (isPast) {
                 const entry = phaseBarEntries[dayDate];
-                if (entry && entry.outOfBedTime) {
-                    const diff = Math.abs(TimeUtils.diffMinutes(entry.outOfBedTime, phase.wake));
+                if (entry && entry.finalWakeTime) {
+                    const diff = Math.abs(TimeUtils.diffMinutes(entry.finalWakeTime, phase.wake));
                     const crossMidnight = diff > 720 ? 1440 - diff : diff;
                     icon = crossMidnight <= 15
                         ? '<span class="phase-bar__icon phase-bar__icon--ok">✓</span>'
