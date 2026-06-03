@@ -33,20 +33,21 @@ const App = (() => {
             wrap.style.display = 'none';
             return;
         }
+
+        const phase = PhaseEngine.getPhaseForDate(activePlan.phases, currentDate);
+        if (!phase) {
+            wrap.innerHTML = '';
+            wrap.style.display = 'none';
+            return;
+        }
         wrap.style.display = '';
 
-        const phases = activePlan.phases;
-        const planStart = phases[0].startDate;
-        const planEnd = phases[phases.length - 1].endDate;
-        const totalDays = daysBetween(planStart, planEnd) + 1;
+        const phaseDays = daysBetween(phase.startDate, phase.endDate) + 1;
         const today = TimeUtils.todayISO();
 
         let cellsHTML = '';
-        for (let i = 0; i < totalDays; i++) {
-            const dayDate = TimeUtils.addDays(planStart, i);
-            const phase = PhaseEngine.getPhaseForDate(phases, dayDate);
-            if (!phase) continue;
-
+        for (let d = 0; d < phaseDays; d++) {
+            const dayDate = TimeUtils.addDays(phase.startDate, d);
             const isSelected = dayDate === currentDate;
             const isToday = dayDate === today;
             const isPast = dayDate < today;
@@ -354,5 +355,7 @@ const App = (() => {
         });
     }
 
-    return { switchTab, advanceDate, setDate, refreshPlan };
+    function getPhaseBarEntries() { return phaseBarEntries; }
+
+    return { switchTab, advanceDate, setDate, refreshPlan, getPhaseBarEntries };
 })();
