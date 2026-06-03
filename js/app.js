@@ -131,6 +131,7 @@ const App = (() => {
         renderPhaseLabel();
         SleepForm.setDate(currentDate);
         Protocol.setDate(currentDate);
+        Routine.setDate(currentDate);
         container.querySelectorAll('.view').forEach(v => v.scrollTop = 0);
     }
 
@@ -321,6 +322,7 @@ const App = (() => {
             renderPhaseBar();
             renderPhaseLabel();
             Protocol.setPlan(activePlan);
+            Routine.setPlan(activePlan);
             SleepForm.render();
             Protocol.render();
             Routine.render();
@@ -346,12 +348,14 @@ const App = (() => {
         renderPhaseLabel();
         SleepForm.setDate(currentDate);
         Protocol.setDate(currentDate);
+        Routine.setDate(currentDate);
         container.querySelectorAll('.view').forEach(v => v.scrollTop = 0);
     }
 
     function refreshPlan() {
         return loadActivePlan().then(() => {
             Protocol.setPlan(activePlan);
+            Routine.setPlan(activePlan);
             renderPhaseBar();
             renderPhaseLabel();
         });

@@ -28,6 +28,16 @@ const Settings = (() => {
                 ? '<button class="settings__btn settings__btn--danger" id="settings-reset">Сбросить план</button>'
                 : '';
 
+            var routineMode = Routine.getMode();
+            var routineModeHTML =
+                '<div class="settings__toggle-row">' +
+                    '<span class="settings__toggle-label">Чекбоксы в распорядке</span>' +
+                    '<label class="settings__toggle">' +
+                        '<input type="checkbox" id="settings-routine-mode"' + (routineMode === 'checklist' ? ' checked' : '') + '>' +
+                        '<span class="settings__toggle-slider"></span>' +
+                    '</label>' +
+                '</div>';
+
             overlay.innerHTML =
                 '<div class="settings-panel">' +
                     '<div class="settings__header">' +
@@ -41,6 +51,10 @@ const Settings = (() => {
                         '<button class="settings__btn" id="settings-new-plan">Новый план</button>' +
                         '<button class="settings__btn" id="settings-routine">Вечерний распорядок</button>' +
                         resetBtn +
+                    '</div>' +
+                    '<div class="settings__section">' +
+                        '<div class="settings__section-title">Распорядок</div>' +
+                        routineModeHTML +
                     '</div>' +
                     '<div class="settings__version" id="settings-version"></div>' +
                 '</div>';
@@ -91,6 +105,11 @@ const Settings = (() => {
                     });
                 });
             });
+        });
+
+        overlay.querySelector('#settings-routine-mode').addEventListener('change', function (e) {
+            Routine.setMode(e.target.checked ? 'checklist' : 'list');
+            Routine.render();
         });
 
         var resetBtn = overlay.querySelector('#settings-reset');
