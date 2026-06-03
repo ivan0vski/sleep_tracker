@@ -19,15 +19,6 @@ const Settings = (() => {
             var statusHTML = '';
             var planBtn = '';
             if (plan) {
-                var phase = PhaseEngine.getPhaseForDate(plan.phases, TimeUtils.todayISO());
-                var phaseText = phase
-                    ? 'Фаза ' + phase.number + ' из ' + plan.phases.length
-                    : 'План завершён';
-                statusHTML =
-                    '<div class="settings__status">' +
-                        '<div class="settings__status-line">' + phaseText + '</div>' +
-                        '<div class="settings__status-sub">Цель: подъём ' + plan.targetWake + '</div>' +
-                    '</div>';
                 planBtn = '<button class="settings__btn" id="settings-plan-detail">Текущий план</button>';
             } else {
                 statusHTML = '<div class="settings__status"><div class="settings__status-line">Нет активного плана</div></div>';
