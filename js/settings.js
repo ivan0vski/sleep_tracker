@@ -50,11 +50,8 @@ const Settings = (() => {
                         planBtn +
                         '<button class="settings__btn" id="settings-new-plan">Новый план</button>' +
                         '<button class="settings__btn" id="settings-routine">Вечерний распорядок</button>' +
-                        resetBtn +
-                    '</div>' +
-                    '<div class="settings__section">' +
-                        '<div class="settings__section-title">Распорядок</div>' +
                         routineModeHTML +
+                        resetBtn +
                     '</div>' +
                     '<div class="settings__version" id="settings-version"></div>' +
                 '</div>';
