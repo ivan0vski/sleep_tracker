@@ -1970,20 +1970,29 @@ input[type="number"]::-webkit-outer-spin-button {
 .phase-bar {
     display: flex;
     flex-wrap: wrap;
-    gap: 15px;
+    gap: 18px;
     justify-content: center;
     padding: 4px 0;
 }
 
 .phase-bar__cell {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     border-radius: 3px;
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
+    cursor: pointer;
     transition: transform var(--transition);
+}
+
+.phase-bar__cell--prep {
+    background: rgba(255, 255, 255, 0.85) !important;
+}
+
+[data-theme="light"] .phase-bar__cell--prep {
+    background: rgba(0, 0, 0, 0.12) !important;
 }
 
 .phase-bar__cell--selected {
@@ -2169,4 +2178,67 @@ input[type="number"]::-webkit-outer-spin-button {
 
 [data-theme="light"] .phase-cal {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Welcome Page (prep day) */
+.welcome-page {
+    padding: 32px 16px;
+    text-align: center;
+}
+
+.welcome-page__icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.welcome-page__title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.welcome-page__subtitle {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+}
+
+.welcome-page__card {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    padding: var(--spacing);
+    margin-bottom: 12px;
+    text-align: left;
+}
+
+.welcome-page__card-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.welcome-page__card ul {
+    list-style: none;
+    padding: 0;
+}
+
+.welcome-page__card li {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text-primary);
+    padding: 4px 0;
+    padding-left: 20px;
+    position: relative;
+}
+
+.welcome-page__card li::before {
+    content: '•';
+    position: absolute;
+    left: 4px;
+    color: var(--accent-light);
+}
+
+[data-theme="light"] .welcome-page__card {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }

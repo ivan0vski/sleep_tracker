@@ -6,6 +6,10 @@ const App = (() => {
     let currentIndex = 0;
     let container = null;
 
+    function isPrepDay() {
+        return activePlan && activePlan.prepDate && currentDate === activePlan.prepDate;
+    }
+
     function formatDateDisplay(isoDate) {
         const [y, m, d] = isoDate.split('-');
         const months = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
@@ -34,13 +38,18 @@ const App = (() => {
             return;
         }
 
-        const phase = PhaseEngine.getPhaseForDate(activePlan.phases, currentDate);
-        if (!phase) {
+        const lastPhase = activePlan.phases[activePlan.phases.length - 1];
+        const hasPrepDate = !!activePlan.prepDate;
+        const earliest = hasPrepDate ? activePlan.prepDate : activePlan.phases[0].startDate;
+
+        if (currentDate < earliest || currentDate > lastPhase.endDate) {
             wrap.innerHTML = '';
             wrap.style.display = 'none';
             return;
         }
         wrap.style.display = '';
+
+        const phase = PhaseEngine.getPhaseForDate(activePlan.phases, currentDate) || activePlan.phases[0];
 
         const planPhaseDays = activePlan.phaseDays || 7;
         if (planPhaseDays <= 2) {
@@ -53,8 +62,17 @@ const App = (() => {
     function renderPhaseBarSingle(wrap, phase) {
         const phaseDays = daysBetween(phase.startDate, phase.endDate) + 1;
         const today = TimeUtils.todayISO();
+        const hasPrepDate = !!activePlan.prepDate;
 
         let cellsHTML = '';
+
+        if (hasPrepDate) {
+            let prepCls = 'phase-bar__cell phase-bar__cell--prep';
+            if (activePlan.prepDate === currentDate) prepCls += ' phase-bar__cell--selected';
+            if (activePlan.prepDate === today) prepCls += ' phase-bar__cell--today';
+            cellsHTML += '<div class="' + prepCls + '" data-date="' + activePlan.prepDate + '"></div>';
+        }
+
         for (let d = 0; d < phaseDays; d++) {
             const dayDate = TimeUtils.addDays(phase.startDate, d);
             const isSelected = dayDate === currentDate;
@@ -89,6 +107,11 @@ const App = (() => {
         const PAGE_SIZE = 7;
 
         const allDays = [];
+
+        if (activePlan.prepDate) {
+            allDays.push({ date: activePlan.prepDate, phase: null, isPrep: true });
+        }
+
         phases.forEach(p => {
             const pDays = daysBetween(p.startDate, p.endDate) + 1;
             for (let d = 0; d < pDays; d++) {
@@ -112,6 +135,12 @@ const App = (() => {
             let cls = 'phase-bar__cell';
             if (isSelected) cls += ' phase-bar__cell--selected';
             if (isToday) cls += ' phase-bar__cell--today';
+
+            if (day.isPrep) {
+                cls += ' phase-bar__cell--prep';
+                cellsHTML += '<div class="' + cls + '" data-date="' + day.date + '"></div>';
+                return;
+            }
 
             let icon = '';
             if (isPast) {
@@ -159,6 +188,14 @@ const App = (() => {
             return;
         }
 
+        if (isPrepDay()) {
+            el.style.display = '';
+            el.innerHTML =
+                '<span class="phase-label__dot" style="background:var(--text-secondary)"></span>' +
+                '<span class="phase-label__text">День подготовки</span>';
+            return;
+        }
+
         const phase = PhaseEngine.getPhaseForDate(activePlan.phases, currentDate);
         if (!phase) {
             el.innerHTML = '';
@@ -186,6 +223,57 @@ const App = (() => {
         });
     }
 
+    function updateTabVisibility() {
+        const prep = isPrepDay();
+        const PREP_TABS = ['form', 'instruction', 'history'];
+
+        document.querySelectorAll('.tab').forEach(t => {
+            var tab = t.dataset.tab;
+            if (prep) {
+                t.style.display = PREP_TABS.indexOf(tab) >= 0 ? '' : 'none';
+            } else {
+                t.style.display = '';
+            }
+        });
+
+        if (prep) {
+            renderWelcomePage();
+            if (PREP_TABS.indexOf(TAB_ORDER[currentIndex]) < 0) {
+                switchTab('form');
+            }
+        }
+    }
+
+    function renderWelcomePage() {
+        var c = document.getElementById('form-view');
+        c.innerHTML =
+            '<div class="welcome-page">' +
+                '<div class="welcome-page__icon">🌙</div>' +
+                '<div class="welcome-page__title">План создан!</div>' +
+                '<div class="welcome-page__subtitle">Сегодня — день подготовки. Завтра начнётся Фаза 1.</div>' +
+                '<div class="welcome-page__card">' +
+                    '<div class="welcome-page__card-title">📋 Сегодня вечером</div>' +
+                    '<ul>' +
+                        '<li>Следуй своему обычному вечернему режиму</li>' +
+                        '<li>Когда ляжешь спать — переключись на завтрашний день и отметь время «во сколько лёг в кровать»</li>' +
+                    '</ul>' +
+                '</div>' +
+                '<div class="welcome-page__card">' +
+                    '<div class="welcome-page__card-title">📖 Завтра утром</div>' +
+                    '<ul>' +
+                        '<li>Заполни остальные поля трекера</li>' +
+                        '<li>Начинай следовать протоколу и распорядку</li>' +
+                    '</ul>' +
+                '</div>' +
+                '<div class="welcome-page__card">' +
+                    '<div class="welcome-page__card-title">💡 Совет</div>' +
+                    '<ul>' +
+                        '<li>Загляни во вкладку «Инструкция» — там описан порядок действий на каждый день</li>' +
+                    '</ul>' +
+                '</div>' +
+            '</div>';
+    }
+
     function shiftDate(offset) {
         const d = new Date(currentDate + 'T12:00:00');
         d.setDate(d.getDate() + offset);
@@ -195,7 +283,10 @@ const App = (() => {
         updateDateDisplay();
         renderPhaseBar();
         renderPhaseLabel();
-        SleepForm.setDate(currentDate);
+        updateTabVisibility();
+        if (!isPrepDay()) {
+            SleepForm.setDate(currentDate);
+        }
         Protocol.setDate(currentDate);
         Routine.setDate(currentDate);
         Instruction.setDate(currentDate);
@@ -266,6 +357,7 @@ const App = (() => {
 
         document.addEventListener('touchmove', (e) => {
             if (startX === null || isLocked) return;
+            if (isPrepDay()) { startX = null; return; }
             const x = e.touches[0].clientX;
             const y = e.touches[0].clientY;
             const deltaX = x - startX;
@@ -320,8 +412,13 @@ const App = (() => {
     }
 
     function switchTab(tabName) {
+        if (isPrepDay() && tabName !== 'form' && tabName !== 'instruction' && tabName !== 'history') {
+            return;
+        }
+
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('tab--active'));
-        document.querySelector(`[data-tab="${tabName}"]`).classList.add('tab--active');
+        var tabBtn = document.querySelector(`[data-tab="${tabName}"]`);
+        if (tabBtn) tabBtn.classList.add('tab--active');
 
         const newIndex = TAB_ORDER.indexOf(tabName);
         const gap = Math.abs(newIndex - currentIndex);
@@ -375,6 +472,15 @@ const App = (() => {
         });
     }
 
+    function setupPhaseBarClick() {
+        document.getElementById('phase-bar-wrap').addEventListener('click', function(e) {
+            var cell = e.target.closest('.phase-bar__cell');
+            if (cell && cell.dataset.date) {
+                setDate(cell.dataset.date);
+            }
+        });
+    }
+
     function init() {
         registerServiceWorker();
         initTheme();
@@ -398,8 +504,10 @@ const App = (() => {
             Routine.render();
             Instruction.render();
             History.render();
+            updateTabVisibility();
             setupTabs();
             setupDateSelector();
+            setupPhaseBarClick();
             setupSwipe();
             slideTo(0);
         });
@@ -416,7 +524,10 @@ const App = (() => {
         updateDateDisplay();
         renderPhaseBar();
         renderPhaseLabel();
-        SleepForm.setDate(currentDate);
+        updateTabVisibility();
+        if (!isPrepDay()) {
+            SleepForm.setDate(currentDate);
+        }
         Protocol.setDate(currentDate);
         Routine.setDate(currentDate);
         Instruction.setDate(currentDate);
@@ -431,6 +542,7 @@ const App = (() => {
             Instruction.setPlan(activePlan);
             renderPhaseBar();
             renderPhaseLabel();
+            updateTabVisibility();
         });
     }
 
@@ -448,6 +560,7 @@ const App = (() => {
             Instruction.setPlan(null);
             renderPhaseBar();
             renderPhaseLabel();
+            updateTabVisibility();
             showCompletionMessage();
         });
     }

@@ -168,7 +168,8 @@ const SetupWizard = (() => {
         var phases = getPreviewPhases();
         var phaseDays = config.phaseDays || PhaseEngine.DEFAULTS.phaseDays;
         var totalDays = phases.length * phaseDays;
-        var startDate = TimeUtils.todayISO();
+        var prepDate = TimeUtils.todayISO();
+        var startDate = TimeUtils.addDays(prepDate, 1);
         var finishDate = phases.length ? phases[phases.length - 1].endDate : startDate;
 
         var rows = phases.map(function (p) {
@@ -186,7 +187,8 @@ const SetupWizard = (() => {
                     phases.length + ' ' + pluralize(phases.length, 'фаза', 'фазы', 'фаз') +
                     ' · ' + totalDays + ' ' + pluralize(totalDays, 'день', 'дня', 'дней') +
                 '</div>' +
-                '<div class="wizard__summary-line">Старт: ' + formatDateRu(startDate) + '</div>' +
+                '<div class="wizard__summary-line">' + formatDateRu(prepDate) + ' — день подготовки</div>' +
+                '<div class="wizard__summary-line">Старт фазы 1: ' + formatDateRu(startDate) + '</div>' +
                 '<div class="wizard__summary-line">Финиш: ' + formatDateRu(finishDate) + '</div>' +
             '</div>' +
             '<div class="wizard__phase-table">' + rows + '</div>';
@@ -321,7 +323,7 @@ const SetupWizard = (() => {
             desiredSleepHours: config.desiredSleepHours || PhaseEngine.DEFAULTS.desiredSleepHours,
             stepMinutes: config.stepMinutes,
             phaseDays: config.phaseDays || PhaseEngine.DEFAULTS.phaseDays,
-            startDate: TimeUtils.todayISO()
+            startDate: TimeUtils.addDays(TimeUtils.todayISO(), 1)
         });
     }
 
@@ -381,7 +383,8 @@ const SetupWizard = (() => {
         var activePlan = await DB.getActivePlan();
         if (activePlan) await DB.updatePlanStatus(activePlan.id, 'archived');
 
-        var startDate = TimeUtils.todayISO();
+        var prepDate = TimeUtils.todayISO();
+        var startDate = TimeUtils.addDays(prepDate, 1);
         var phases = PhaseEngine.calculatePhases({
             currentWake: config.currentWake,
             targetWake: config.targetWake,
@@ -399,6 +402,7 @@ const SetupWizard = (() => {
             desiredSleepHours: config.desiredSleepHours,
             stepMinutes: config.stepMinutes,
             phaseDays: config.phaseDays,
+            prepDate: prepDate,
             startDate: startDate,
             phases: phases,
             createdAt: new Date().toISOString()
