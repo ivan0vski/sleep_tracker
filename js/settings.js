@@ -147,6 +147,10 @@ const Settings = (() => {
                     '<span class="plan-detail__value">' + plan.stepMinutes + ' мин</span>' +
                 '</div>' +
                 '<div class="plan-detail__row">' +
+                    '<span class="plan-detail__label">Дней на фазу</span>' +
+                    '<span class="plan-detail__value">' + (plan.phaseDays || 7) + '</span>' +
+                '</div>' +
+                '<div class="plan-detail__row">' +
                     '<span class="plan-detail__label">Фаз</span>' +
                     '<span class="plan-detail__value">' + phases.length + '</span>' +
                 '</div>' +

@@ -14,6 +14,8 @@ const PhaseEngine = (() => {
 
     const STEP_OPTIONS = [15, 20, 30, 45, 60];
 
+    const PHASE_DAYS_OPTIONS = [1, 2, 3, 4, 5, 6, 7];
+
     const DEFAULT_ROUTINE_STEPS = [
         { id: 'step_1', name: 'Подготовка к ужину',     emoji: '🍽', offsetMinutes: -160, order: 0, isFixed: false },
         { id: 'step_2', name: 'Выключить экраны',       emoji: '📴', offsetMinutes: -120, order: 1, isFixed: false },
@@ -156,6 +158,7 @@ const PhaseEngine = (() => {
         PHASE_COLORS,
         DEFAULTS,
         STEP_OPTIONS,
+        PHASE_DAYS_OPTIONS,
         DEFAULT_ROUTINE_STEPS,
         calculatePhases,
         getPhaseForDate,

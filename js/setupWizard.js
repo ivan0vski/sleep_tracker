@@ -15,6 +15,7 @@ const SetupWizard = (() => {
             currentWake: '09:00',
             targetWake: '06:00',
             stepMinutes: null,
+            phaseDays: null,
             desiredSleepHours: null
         };
         routineSteps = PhaseEngine.DEFAULT_ROUTINE_STEPS.map(s => ({ ...s }));
@@ -33,7 +34,7 @@ const SetupWizard = (() => {
             document.body.appendChild(overlay);
         }
 
-        const renderers = [null, renderStep1, renderStep2, renderStep3, renderStep4, renderStep5, renderStep6];
+        const renderers = [null, renderStep1, renderStep2, renderStep3, renderStep4, renderStep5, renderStep6, renderStep7];
         const content = renderers[currentStep]();
         const canNext = validate();
 
@@ -43,10 +44,10 @@ const SetupWizard = (() => {
         } else {
             footerHTML += '<div></div>';
         }
-        if (currentStep < 6) {
+        if (currentStep < 7) {
             footerHTML += '<button class="wizard__btn wizard__btn--next"' + (canNext ? '' : ' disabled') + '>Далее</button>';
         }
-        if (currentStep === 6) {
+        if (currentStep === 7) {
             footerHTML += '<button class="wizard__btn wizard__btn--start">Начать</button>';
         }
 
@@ -54,7 +55,7 @@ const SetupWizard = (() => {
             '<div class="wizard">' +
                 '<div class="wizard__header">' +
                     '<button class="wizard__close">&times;</button>' +
-                    '<span class="wizard__indicator">Шаг ' + currentStep + ' из 6</span>' +
+                    '<span class="wizard__indicator">Шаг ' + currentStep + ' из 7</span>' +
                 '</div>' +
                 '<div class="wizard__body">' + content + '</div>' +
                 '<div class="wizard__footer">' + footerHTML + '</div>' +
@@ -83,6 +84,7 @@ const SetupWizard = (() => {
         if (currentStep === 3) bindStep3();
         if (currentStep === 4) bindStep4();
         if (currentStep === 5) bindStep5();
+        if (currentStep === 6) bindStep6();
     }
 
     // --- Step renderers ---
@@ -110,13 +112,26 @@ const SetupWizard = (() => {
             return '<button class="' + cls + '" data-value="' + v + '">' + v + ' мин</button>';
         }).join('');
 
-        return '<h2 class="wizard__title">На сколько сдвигать за неделю?</h2>' +
+        return '<h2 class="wizard__title">На сколько сдвигать за фазу?</h2>' +
             '<p class="wizard__hint">Выбери шаг сдвига в минутах</p>' +
             '<div class="wizard__options" id="wiz-stepMinutes">' + btns + '</div>' +
             '<div class="wizard__preview" id="wiz-step-preview">' + buildStepPreview() + '</div>';
     }
 
     function renderStep4() {
+        var btns = PhaseEngine.PHASE_DAYS_OPTIONS.map(function (v) {
+            var cls = 'wizard__option' + (config.phaseDays === v ? ' wizard__option--active' : '');
+            var label = v === 1 ? '1 день' : v + ' ' + pluralize(v, 'день', 'дня', 'дней');
+            return '<button class="' + cls + '" data-value="' + v + '">' + label + '</button>';
+        }).join('');
+
+        return '<h2 class="wizard__title">Сколько дней на каждую фазу?</h2>' +
+            '<p class="wizard__hint">Чем меньше — тем быстрее сдвиг</p>' +
+            '<div class="wizard__options" id="wiz-phaseDays">' + btns + '</div>' +
+            '<div class="wizard__preview" id="wiz-phase-preview">' + buildPhaseDaysPreview() + '</div>';
+    }
+
+    function renderStep5() {
         var options = [7, 7.5, 8, 8.5, 9];
         var btns = options.map(function (v) {
             var cls = 'wizard__option' + (config.desiredSleepHours === v ? ' wizard__option--active' : '');
@@ -128,7 +143,7 @@ const SetupWizard = (() => {
             '<div class="wizard__options" id="wiz-sleepHours">' + btns + '</div>';
     }
 
-    function renderStep5() {
+    function renderStep6() {
         var phases = getPreviewPhases();
         var bed = phases.length ? phases[0].bed : PhaseEngine.DEFAULTS.targetBed;
         var bedMin = TimeUtils.parseTime(bed);
@@ -149,9 +164,10 @@ const SetupWizard = (() => {
             '<button class="wizard__edit-routine" id="wiz-edit-routine">Редактировать</button>';
     }
 
-    function renderStep6() {
+    function renderStep7() {
         var phases = getPreviewPhases();
-        var totalDays = phases.length * PhaseEngine.DEFAULTS.phaseDays;
+        var phaseDays = config.phaseDays || PhaseEngine.DEFAULTS.phaseDays;
+        var totalDays = phases.length * phaseDays;
         var startDate = TimeUtils.todayISO();
         var finishDate = phases.length ? phases[phases.length - 1].endDate : startDate;
 
@@ -208,6 +224,20 @@ const SetupWizard = (() => {
     }
 
     function bindStep4() {
+        overlay.querySelectorAll('#wiz-phaseDays .wizard__option').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                config.phaseDays = +btn.dataset.value;
+                overlay.querySelectorAll('#wiz-phaseDays .wizard__option').forEach(function (b) {
+                    b.classList.toggle('wizard__option--active', +b.dataset.value === config.phaseDays);
+                });
+                var preview = overlay.querySelector('#wiz-phase-preview');
+                if (preview) preview.innerHTML = buildPhaseDaysPreview();
+                updateNextButton();
+            });
+        });
+    }
+
+    function bindStep5() {
         overlay.querySelectorAll('#wiz-sleepHours .wizard__option').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 config.desiredSleepHours = +btn.dataset.value;
@@ -219,7 +249,7 @@ const SetupWizard = (() => {
         });
     }
 
-    function bindStep5() {
+    function bindStep6() {
         overlay.querySelector('#wiz-edit-routine').addEventListener('click', function () {
             var phases = getPreviewPhases();
             var bed = phases.length ? phases[0].bed : PhaseEngine.DEFAULTS.targetBed;
@@ -260,7 +290,8 @@ const SetupWizard = (() => {
             return TimeUtils.parseTime(config.targetWake) < TimeUtils.parseTime(config.currentWake);
         }
         if (currentStep === 3) return config.stepMinutes !== null;
-        if (currentStep === 4) return config.desiredSleepHours !== null;
+        if (currentStep === 4) return config.phaseDays !== null;
+        if (currentStep === 5) return config.desiredSleepHours !== null;
         return true;
     }
 
@@ -289,16 +320,28 @@ const SetupWizard = (() => {
             targetWake: config.targetWake,
             desiredSleepHours: config.desiredSleepHours || PhaseEngine.DEFAULTS.desiredSleepHours,
             stepMinutes: config.stepMinutes,
-            phaseDays: PhaseEngine.DEFAULTS.phaseDays,
+            phaseDays: config.phaseDays || PhaseEngine.DEFAULTS.phaseDays,
             startDate: TimeUtils.todayISO()
         });
     }
 
     function buildStepPreview() {
         if (!config.stepMinutes) return '';
+        var cw = TimeUtils.parseTime(config.currentWake);
+        var tw = TimeUtils.parseTime(config.targetWake);
+        var diff = cw - tw;
+        if (diff <= 0) return '';
+        var phaseCount = Math.ceil(diff / config.stepMinutes);
+        return '<span class="wizard__preview-text">' +
+            phaseCount + ' ' + pluralize(phaseCount, 'фаза', 'фазы', 'фаз') +
+            '</span>';
+    }
+
+    function buildPhaseDaysPreview() {
+        if (!config.stepMinutes || !config.phaseDays) return '';
         var phases = getPreviewPhases();
         if (!phases.length) return '';
-        var totalDays = phases.length * PhaseEngine.DEFAULTS.phaseDays;
+        var totalDays = phases.length * config.phaseDays;
         var finishDate = phases[phases.length - 1].endDate;
         return '<span class="wizard__preview-text">' +
             phases.length + ' ' + pluralize(phases.length, 'фаза', 'фазы', 'фаз') +
@@ -344,7 +387,7 @@ const SetupWizard = (() => {
             targetWake: config.targetWake,
             desiredSleepHours: config.desiredSleepHours,
             stepMinutes: config.stepMinutes,
-            phaseDays: PhaseEngine.DEFAULTS.phaseDays,
+            phaseDays: config.phaseDays,
             startDate: startDate
         });
 
@@ -355,7 +398,7 @@ const SetupWizard = (() => {
             targetWake: config.targetWake,
             desiredSleepHours: config.desiredSleepHours,
             stepMinutes: config.stepMinutes,
-            phaseDays: PhaseEngine.DEFAULTS.phaseDays,
+            phaseDays: config.phaseDays,
             startDate: startDate,
             phases: phases,
             createdAt: new Date().toISOString()

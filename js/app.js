@@ -42,6 +42,15 @@ const App = (() => {
         }
         wrap.style.display = '';
 
+        const planPhaseDays = activePlan.phaseDays || 7;
+        if (planPhaseDays <= 2) {
+            renderPhaseBarPaginated(wrap, phase);
+        } else {
+            renderPhaseBarSingle(wrap, phase);
+        }
+    }
+
+    function renderPhaseBarSingle(wrap, phase) {
         const phaseDays = daysBetween(phase.startDate, phase.endDate) + 1;
         const today = TimeUtils.todayISO();
 
@@ -72,6 +81,63 @@ const App = (() => {
         }
 
         wrap.innerHTML = `<div class="phase-bar">${cellsHTML}</div>`;
+    }
+
+    function renderPhaseBarPaginated(wrap, currentPhase) {
+        const today = TimeUtils.todayISO();
+        const phases = activePlan.phases;
+        const PAGE_SIZE = 7;
+
+        const allDays = [];
+        phases.forEach(p => {
+            const pDays = daysBetween(p.startDate, p.endDate) + 1;
+            for (let d = 0; d < pDays; d++) {
+                allDays.push({ date: TimeUtils.addDays(p.startDate, d), phase: p });
+            }
+        });
+
+        let currentIdx = allDays.findIndex(d => d.date === currentDate);
+        if (currentIdx < 0) currentIdx = 0;
+        const pageNum = Math.floor(currentIdx / PAGE_SIZE);
+        const totalPages = Math.ceil(allDays.length / PAGE_SIZE);
+        const pageStart = pageNum * PAGE_SIZE;
+        const pageSlice = allDays.slice(pageStart, pageStart + PAGE_SIZE);
+
+        let cellsHTML = '';
+        pageSlice.forEach(day => {
+            const isSelected = day.date === currentDate;
+            const isToday = day.date === today;
+            const isPast = day.date < today;
+
+            let cls = 'phase-bar__cell';
+            if (isSelected) cls += ' phase-bar__cell--selected';
+            if (isToday) cls += ' phase-bar__cell--today';
+
+            let icon = '';
+            if (isPast) {
+                const entry = phaseBarEntries[day.date];
+                if (entry && entry.finalWakeTime) {
+                    const diff = Math.abs(TimeUtils.diffMinutes(entry.finalWakeTime, day.phase.wake));
+                    const crossMidnight = diff > 720 ? 1440 - diff : diff;
+                    icon = crossMidnight <= 15
+                        ? '<span class="phase-bar__icon phase-bar__icon--ok">✓</span>'
+                        : '<span class="phase-bar__icon phase-bar__icon--fail">✕</span>';
+                }
+            }
+
+            cellsHTML += `<div class="${cls}" style="background:${day.phase.color}" data-date="${day.date}">${icon}</div>`;
+        });
+
+        let dotsHTML = '';
+        if (totalPages > 1) {
+            let dots = '';
+            for (let i = 0; i < totalPages; i++) {
+                dots += `<span class="phase-bar__dot${i === pageNum ? ' phase-bar__dot--active' : ''}"></span>`;
+            }
+            dotsHTML = `<div class="phase-bar__dots">${dots}</div>`;
+        }
+
+        wrap.innerHTML = `<div class="phase-bar">${cellsHTML}</div>${dotsHTML}`;
     }
 
     function loadPhaseBarEntries() {

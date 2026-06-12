@@ -2015,6 +2015,27 @@ input[type="number"]::-webkit-outer-spin-button {
     color: #fff;
 }
 
+.phase-bar__dots {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.phase-bar__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-secondary);
+    opacity: 0.3;
+}
+
+.phase-bar__dot--active {
+    opacity: 1;
+    background: var(--accent);
+}
+
 /* Phase Label */
 .phase-label {
     display: flex;
