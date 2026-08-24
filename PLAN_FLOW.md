@@ -30,6 +30,7 @@ SleepForm.setPlan(plan)    → form.js запоминает план
 Protocol.setPlan(plan)     → protocol.js запоминает план
 Routine.setPlan(plan)      → routine.js запоминает план
 Instruction.setPlan(plan)  → instruction.js запоминает план
+Notifications.setPlan(plan) → notifications.js перепланирует напоминания
 renderPhaseBar()           → перерисовка прогрессбара
 renderPhaseLabel()         → перерисовка подписи фазы
 ```
@@ -45,6 +46,7 @@ renderPhaseLabel()         → перерисовка подписи фазы
 | **instruction.js** | Два динамических времени — первый шаг распорядка и screensOff — пересчитываются от фазы |
 | **history.js** | Бейдж «фаза N день M» (раскрашен цветом фазы) + индикатор попадания ✓/✕ для каждой записи |
 | **phaseCalendar.js** | Дни в календаре раскрашены цветом фазы |
+| **notifications.js** | Времена напоминаний. Для каждого включённого шага распорядка момент срабатывания = `bed` текущей фазы + `offsetMinutes` − «за сколько минут». При смене фазы время сдвигается автоматически вместе с `bed` |
 | **settings.js** | Кнопка «Текущий план» → детальный экран со статистикой, кнопка «Сбросить план» становится видна |
 
 ## 6. Автозавершение

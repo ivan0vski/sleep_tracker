@@ -53,6 +53,17 @@ const Settings = (() => {
                         routineModeHTML +
                         resetBtn +
                     '</div>' +
+                    '<div class="settings__section">' +
+                        '<div class="settings__section-title">Уведомления</div>' +
+                        '<button class="settings__btn" id="settings-notifications">' +
+                            '🔔 Напоминания о распорядке' +
+                            '<span class="settings__btn-sub">' + notifSummary() + '</span>' +
+                        '</button>' +
+                        '<button class="settings__btn" id="settings-push">' +
+                            '📲 Пуши на телефон' +
+                            '<span class="settings__btn-sub">' + pushSummary() + '</span>' +
+                        '</button>' +
+                    '</div>' +
                     '<div class="settings__version" id="settings-version"></div>' +
                 '</div>';
 
@@ -96,12 +107,23 @@ const Settings = (() => {
                         steps: useSteps,
                         previewBed: bed,
                         onSave: function (newSteps) {
-                            DB.saveRoutineSteps(newSteps);
+                            DB.saveRoutineSteps(newSteps).then(function () {
+                                Notifications.reloadSteps();
+                                Routine.render();
+                            });
                         },
                         onCancel: function () {}
                     });
                 });
             });
+        });
+
+        overlay.querySelector('#settings-notifications').addEventListener('click', function () {
+            renderNotifications();
+        });
+
+        overlay.querySelector('#settings-push').addEventListener('click', function () {
+            renderPush();
         });
 
         overlay.querySelector('#settings-routine-mode').addEventListener('change', function (e) {
@@ -120,6 +142,312 @@ const Settings = (() => {
                 }
             });
         }
+    }
+
+    /* ── Notifications ── */
+
+    function notifSummary() {
+        if (!Notifications.isSupported()) return 'Не поддерживается браузером';
+        if (Notifications.permission() === 'denied') return 'Запрещены в браузере';
+        if (!Notifications.isEnabled()) return 'Выключены';
+
+        var settings = Notifications.getSettings();
+        var count = Notifications.getSteps().filter(function (s) {
+            var cfg = settings.steps[s.id];
+            return cfg && cfg.on;
+        }).length;
+
+        if (!count) return 'Включены · ни один шаг не выбран';
+        return 'Включены · ' + count + ' ' + plural(count, 'шаг', 'шага', 'шагов');
+    }
+
+    function plural(n, one, few, many) {
+        var m10 = n % 10, m100 = n % 100;
+        if (m10 === 1 && m100 !== 11) return one;
+        if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return few;
+        return many;
+    }
+
+    function renderNotifications() {
+        var supported = Notifications.isSupported();
+        var perm = Notifications.permission();
+        var enabled = Notifications.isEnabled() && supported && perm !== 'denied';
+
+        var hint;
+        if (!supported) {
+            hint = 'Этот браузер не умеет показывать уведомления. Открой приложение в Chrome или добавь его на домашний экран.';
+        } else if (perm === 'denied') {
+            hint = 'Уведомления запрещены в настройках браузера для этого сайта. Разреши их там, затем вернись сюда.';
+        } else if (Notifications.supportsTriggers()) {
+            hint = 'Напоминания планируются в фоне на неделю вперёд — приложение может быть закрыто.';
+        } else {
+            hint = 'Этот браузер не умеет будить приложение в фоне: напоминания приходят, пока приложение открыто или свёрнуто, но не выгружено. Время всё равно пересчитывается по текущей фазе.';
+        }
+
+        var toggleHTML =
+            '<div class="settings__toggle-row">' +
+                '<span class="settings__toggle-label">Включить напоминания</span>' +
+                '<label class="settings__toggle">' +
+                    '<input type="checkbox" id="notif-master"' + (enabled ? ' checked' : '') +
+                        (supported && perm !== 'denied' ? '' : ' disabled') + '>' +
+                    '<span class="settings__toggle-slider"></span>' +
+                '</label>' +
+            '</div>';
+
+        var listHTML = '';
+        if (enabled) {
+            listHTML = Notifications.getSteps().map(buildNotifItem).join('');
+            listHTML =
+                '<div class="settings__section-title notif-list-title">Шаги распорядка</div>' +
+                '<div class="notif-list">' + listHTML + '</div>' +
+                '<button class="settings__btn" id="notif-test">Отправить тестовое уведомление</button>';
+        }
+
+        overlay.querySelector('.settings-panel').innerHTML =
+            '<div class="settings__header">' +
+                '<button class="settings__close" id="notif-back">&larr;</button>' +
+                '<span class="settings__title">Уведомления</span>' +
+            '</div>' +
+            toggleHTML +
+            '<div class="notif-hint">' + hint + '</div>' +
+            listHTML;
+
+        bindNotifEvents();
+    }
+
+    function buildNotifItem(step) {
+        var cfg = Notifications.getStepSetting(step.id);
+        var tonight = TimeUtils.addDays(TimeUtils.todayISO(), 1);
+        var time = Notifications.notifTimeForDate(step, tonight, cfg.lead);
+
+        var html =
+            '<div class="notif-item' + (cfg.on ? ' notif-item--on' : '') + '">' +
+                '<div class="notif-item__row">' +
+                    '<span class="notif-item__emoji">' + step.emoji + '</span>' +
+                    '<span class="notif-item__name">' + step.name + '</span>' +
+                    '<span class="notif-item__time">' + (cfg.on ? time : Notifications.stepTimeForDate(step, tonight)) + '</span>' +
+                    '<label class="settings__toggle">' +
+                        '<input type="checkbox" class="notif-item__toggle" data-step="' + step.id + '"' + (cfg.on ? ' checked' : '') + '>' +
+                        '<span class="settings__toggle-slider"></span>' +
+                    '</label>' +
+                '</div>';
+
+        if (cfg.on) {
+            var opts = Notifications.LEAD_OPTIONS.map(function (l) {
+                return '<option value="' + l + '"' + (l === cfg.lead ? ' selected' : '') + '>' +
+                    Notifications.leadLabel(l) + '</option>';
+            }).join('');
+
+            var preview = Notifications.previewRows(step).map(function (r) {
+                return '<div class="notif-item__preview-row">' +
+                    '<span>' + r.label + '</span>' +
+                    '<span class="notif-item__preview-time">' + r.time + '</span>' +
+                '</div>';
+            }).join('');
+
+            html +=
+                '<div class="notif-item__detail">' +
+                    '<div class="notif-item__lead">' +
+                        '<label>Напомнить</label>' +
+                        '<select class="notif-item__select" data-step="' + step.id + '">' + opts + '</select>' +
+                    '</div>' +
+                    '<div class="notif-item__preview">' + preview + '</div>' +
+                '</div>';
+        }
+
+        return html + '</div>';
+    }
+
+    function bindNotifEvents() {
+        overlay.querySelector('#notif-back').addEventListener('click', renderContent);
+
+        var master = overlay.querySelector('#notif-master');
+        master.addEventListener('change', function (e) {
+            if (!e.target.checked) {
+                Notifications.setEnabled(false);
+                renderNotifications();
+                return;
+            }
+            Notifications.requestPermission().then(function (perm) {
+                Notifications.setEnabled(perm === 'granted');
+                renderNotifications();
+            });
+        });
+
+        overlay.querySelectorAll('.notif-item__toggle').forEach(function (input) {
+            input.addEventListener('change', function () {
+                Notifications.setStepSetting(input.dataset.step, { on: input.checked });
+                renderNotifications();
+            });
+        });
+
+        overlay.querySelectorAll('.notif-item__select').forEach(function (select) {
+            select.addEventListener('change', function () {
+                Notifications.setStepSetting(select.dataset.step, { lead: +select.value });
+                renderNotifications();
+            });
+        });
+
+        var testBtn = overlay.querySelector('#notif-test');
+        if (testBtn) {
+            testBtn.addEventListener('click', function () {
+                Notifications.test();
+            });
+        }
+    }
+
+    /* ── Push ── */
+
+    function pushSummary() {
+        if (!PushSync.isSupported()) return 'Браузер не поддерживает';
+        if (!PushSync.isConfigured()) return 'Не настроено';
+        if (!PushSync.isEnabled()) return 'Отключены';
+        return 'Подключены';
+    }
+
+    function escapeAttr(s) {
+        return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    }
+
+    function renderPush() {
+        var cfg = PushSync.getConfig();
+        var checks = [
+            ['Push в браузере', PushSync.isSupported()],
+            ['Добавлено на домашний экран', !PushSync.needsHomeScreen()],
+            ['Воркер настроен', PushSync.isConfigured()],
+            ['Подписка активна', PushSync.isEnabled()]
+        ];
+
+        var checksHTML = checks.map(function (c) {
+            return '<div class="push-check">' +
+                '<span class="push-check__mark' + (c[1] ? ' push-check__mark--ok' : '') + '">' +
+                    (c[1] ? '✓' : '·') +
+                '</span>' +
+                '<span>' + c[0] + '</span>' +
+            '</div>';
+        }).join('');
+
+        var err = PushSync.getLastError();
+        var errHTML = err ? '<div class="push-error">' + err + '</div>' : '';
+
+        var canToggle = PushSync.isSupported() && !PushSync.needsHomeScreen() && PushSync.isConfigured();
+
+        overlay.querySelector('.settings-panel').innerHTML =
+            '<div class="settings__header">' +
+                '<button class="settings__close" id="push-back">&larr;</button>' +
+                '<span class="settings__title">Пуши на телефон</span>' +
+            '</div>' +
+
+            '<div class="notif-hint">' +
+                'Уведомления приходят на экран блокировки, даже когда приложение закрыто. ' +
+                'Расписание считается здесь и заливается на твой Cloudflare Worker — ' +
+                'при смене фазы времена едут автоматически. Инструкция по развёртыванию — ' +
+                'в push-worker/README.md.' +
+            '</div>' +
+
+            '<div class="push-checks">' + checksHTML + '</div>' +
+            errHTML +
+
+            '<div class="settings__section-title">Воркер</div>' +
+            '<div class="push-field">' +
+                '<label>Адрес</label>' +
+                '<input type="url" id="push-url" class="push-input" placeholder="https://sleep-push.xxx.workers.dev" value="' + escapeAttr(cfg.url) + '">' +
+            '</div>' +
+            '<div class="push-field">' +
+                '<label>Токен</label>' +
+                '<input type="password" id="push-token" class="push-input" placeholder="ADMIN_TOKEN" value="' + escapeAttr(cfg.token) + '">' +
+            '</div>' +
+            '<button class="settings__btn" id="push-save">Сохранить</button>' +
+
+            '<div class="settings__toggle-row">' +
+                '<span class="settings__toggle-label">Подключить пуши</span>' +
+                '<label class="settings__toggle">' +
+                    '<input type="checkbox" id="push-toggle"' +
+                        (PushSync.isEnabled() ? ' checked' : '') +
+                        (canToggle ? '' : ' disabled') + '>' +
+                    '<span class="settings__toggle-slider"></span>' +
+                '</label>' +
+            '</div>' +
+
+            '<div class="push-status" id="push-status"></div>' +
+            (PushSync.isEnabled()
+                ? '<button class="settings__btn" id="push-test">Отправить тестовый пуш</button>'
+                : '') +
+
+            '<div class="settings__version" id="settings-version"></div>';
+
+        bindPushEvents();
+        loadPushStatus();
+        loadVersion();
+    }
+
+    function bindPushEvents() {
+        overlay.querySelector('#push-back').addEventListener('click', renderContent);
+
+        overlay.querySelector('#push-save').addEventListener('click', function () {
+            PushSync.setConfig({
+                url: overlay.querySelector('#push-url').value,
+                token: overlay.querySelector('#push-token').value
+            });
+            renderPush();
+        });
+
+        var toggle = overlay.querySelector('#push-toggle');
+        toggle.addEventListener('change', function (e) {
+            var statusEl = overlay.querySelector('#push-status');
+            if (e.target.checked) {
+                statusEl.textContent = 'Подключаю…';
+                PushSync.enable().then(function () {
+                    renderPush();
+                }).catch(function () {
+                    renderPush();
+                });
+            } else {
+                statusEl.textContent = 'Отключаю…';
+                PushSync.disable().then(function () {
+                    renderPush();
+                });
+            }
+        });
+
+        var testBtn = overlay.querySelector('#push-test');
+        if (testBtn) {
+            testBtn.addEventListener('click', function () {
+                var statusEl = overlay.querySelector('#push-status');
+                statusEl.textContent = 'Отправляю…';
+                PushSync.test().then(function (res) {
+                    statusEl.textContent = res.ok
+                        ? 'Отправлено, ждём на телефоне'
+                        : ('Push-сервис ответил ' + res.status);
+                }).catch(function (err) {
+                    statusEl.textContent = 'Ошибка: ' + (err.message || err);
+                });
+            });
+        }
+    }
+
+    function loadPushStatus() {
+        if (!PushSync.isEnabled() || !PushSync.isConfigured()) return;
+        var el = overlay.querySelector('#push-status');
+        if (!el) return;
+        el.textContent = 'Проверяю…';
+
+        PushSync.status().then(function (st) {
+            var target = overlay && overlay.querySelector('#push-status');
+            if (!target) return;
+            if (!st.registered) {
+                target.textContent = st.error ? ('Ошибка: ' + st.error) : 'Не зарегистрировано на воркере';
+                return;
+            }
+            if (!st.pending) {
+                target.textContent = 'Запланировано: ничего. Включи шаги в «Напоминания о распорядке».';
+                return;
+            }
+            var next = new Date(st.next.ts);
+            target.textContent = 'Запланировано: ' + st.pending + ' · ближайшее ' +
+                next.toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) +
+                ' — ' + st.next.title;
+        });
     }
 
     function renderPlanDetail(plan) {

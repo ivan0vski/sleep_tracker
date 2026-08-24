@@ -498,6 +498,8 @@ const App = (() => {
             Protocol.setPlan(activePlan);
             Routine.setPlan(activePlan);
             Instruction.setPlan(activePlan);
+            Notifications.init(activePlan);
+            PushSync.init();
             checkPlanCompletion();
             SleepForm.render();
             Protocol.render();
@@ -540,6 +542,7 @@ const App = (() => {
             Protocol.setPlan(activePlan);
             Routine.setPlan(activePlan);
             Instruction.setPlan(activePlan);
+            Notifications.setPlan(activePlan);
             renderPhaseBar();
             renderPhaseLabel();
             updateTabVisibility();
@@ -558,6 +561,7 @@ const App = (() => {
             Protocol.setPlan(null);
             Routine.setPlan(null);
             Instruction.setPlan(null);
+            Notifications.setPlan(null);
             renderPhaseBar();
             renderPhaseLabel();
             updateTabVisibility();
