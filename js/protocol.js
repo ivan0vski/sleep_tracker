@@ -20,7 +20,7 @@ const Protocol = (() => {
         const bed = ctx.bed;
         const wakePlus30 = TimeUtils.addMinutes(wake, 30);
         const afternoonReminder = TimeUtils.addMinutes(wake, 540);
-        const goHomeNotify = TimeUtils.addMinutes(bed, -165);
+        const goHomeNotify = TimeUtils.addMinutes(bed, PhaseEngine.protocolNotifStep('proto_go_home').offsetMinutes);
         const taxiTime = TimeUtils.addMinutes(bed, -160);
         const homeBy = TimeUtils.addMinutes(bed, -130);
         const dimLights = TimeUtils.addMinutes(bed, -70);

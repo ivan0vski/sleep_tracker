@@ -90,26 +90,22 @@ const Notifications = (() => {
 
     /* ── Time resolution (phase-aware) ── */
 
-    function activeSteps() {
+    function routineSteps() {
         return steps && steps.length ? steps : PhaseEngine.DEFAULT_ROUTINE_STEPS;
     }
 
-    // Absolute timestamp of 00:00 on isoDate plus `minutes`.
-    function dateAtMinutes(isoDate, minutes) {
-        const parts = isoDate.split('-');
-        const d = new Date(+parts[0], +parts[1] - 1, +parts[2], 0, 0, 0, 0);
-        return d.getTime() + minutes * 60000;
+    function protocolSteps() {
+        return PhaseEngine.PROTOCOL_NOTIF_STEPS;
     }
 
-    // The routine of wake-date D runs on the evening BEFORE D
-    // (bed = wake - sleepDuration). Returns the absolute ms of "в кровать".
-    function bedTimestamp(ctx, dateStr) {
-        const sleepMin = TimeUtils.diffMinutes(ctx.wake, ctx.bed);
-        return dateAtMinutes(dateStr, TimeUtils.parseTime(ctx.wake)) - sleepMin * 60000;
+    // Напоминать можно и по шагам распорядка, и по пунктам протокола:
+    // и те и другие привязаны к отбою, поэтому считаются одинаково.
+    function activeSteps() {
+        return routineSteps().concat(protocolSteps());
     }
 
     function contextFor(dateStr) {
-        return PhaseEngine.getDayContext(plan, activeSteps(), dateStr);
+        return PhaseEngine.getDayContext(plan, routineSteps(), dateStr);
     }
 
     // Clock time a step's notification fires on the given wake-date.
@@ -131,7 +127,8 @@ const Notifications = (() => {
         if (!settings.enabled) return [];
 
         const ctx = contextFor(dateStr);
-        const bedTs = bedTimestamp(ctx, dateStr);
+        // Момент отбоя считает PhaseEngine — тем же расчётом, что и порог смены суток.
+        const bedTs = PhaseEngine.bedTimestamp(plan, dateStr);
         const out = [];
 
         activeSteps().forEach(step => {
@@ -377,6 +374,8 @@ const Notifications = (() => {
         isEnabled, setEnabled,
         getSettings, getStepSetting, setStepSetting,
         getSteps: activeSteps,
+        getRoutineSteps: routineSteps,
+        getProtocolSteps: protocolSteps,
         notifTimeForDate, stepTimeForDate, previewRows, leadLabel,
         upcoming, fullSchedule, test
     };

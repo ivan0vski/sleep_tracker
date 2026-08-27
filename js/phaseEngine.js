@@ -16,6 +16,9 @@ const PhaseEngine = (() => {
 
     const PHASE_DAYS_OPTIONS = [1, 2, 3, 4, 5, 6, 7];
 
+    // За сколько до отбоя начинаются следующие сутки приложения.
+    const EVENING_ROLLOVER_MINUTES = 180;
+
     const DEFAULT_ROUTINE_STEPS = [
         { id: 'step_1', name: 'Подготовка к ужину',     emoji: '🍽', offsetMinutes: -160, order: 0, isFixed: false },
         { id: 'step_2', name: 'Выключить экраны',       emoji: '📴', offsetMinutes: -120, order: 1, isFixed: false },
@@ -25,6 +28,18 @@ const PhaseEngine = (() => {
         { id: 'step_6', name: 'Расслабиться, походить', emoji: '🛋', offsetMinutes: -15,  order: 5, isFixed: false },
         { id: 'step_7', name: 'В кровать',              emoji: '🛏', offsetMinutes: 0,    order: 6, isFixed: true  }
     ];
+
+    // Пункты протокола, для которых можно включить уведомление.
+    // Форма та же, что у шагов распорядка: offsetMinutes отсчитывается от отбоя,
+    // поэтому они проходят через тот же механизм напоминаний.
+    // Единственный источник времени — protocol.js берёт offset отсюда же.
+    const PROTOCOL_NOTIF_STEPS = [
+        { id: 'proto_go_home', name: 'Ехать домой', emoji: '🏠', offsetMinutes: -165 }
+    ];
+
+    function protocolNotifStep(id) {
+        return PROTOCOL_NOTIF_STEPS.find(s => s.id === id) || null;
+    }
 
     function calculatePhases(config) {
         const { currentWake, targetWake, desiredSleepHours, stepMinutes, phaseDays, startDate } = config;
@@ -58,6 +73,23 @@ const PhaseEngine = (() => {
         }
 
         return phases;
+    }
+
+    // Абсолютное время 00:00 указанной даты плюс minutes.
+    function dateAtMinutes(isoDate, minutes) {
+        const p = isoDate.split('-');
+        const d = new Date(+p[0], +p[1] - 1, +p[2], 0, 0, 0, 0);
+        return d.getTime() + minutes * 60000;
+    }
+
+    // Ночь помечена датой утра, а отбой хранится без даты — поэтому
+    // момент «в кровать» отсчитывается назад от подъёма: так отбой 00:00
+    // попадает на предыдущий вечер, а не на текущий.
+    // Единственный источник для пушей и для порога смены суток.
+    function bedTimestamp(plan, dateStr) {
+        const ctx = getDayContext(plan, null, dateStr);
+        const sleepMin = TimeUtils.diffMinutes(ctx.wake, ctx.bed);
+        return dateAtMinutes(dateStr, TimeUtils.parseTime(ctx.wake)) - sleepMin * 60000;
     }
 
     function getPhaseForDate(phases, dateStr) {
@@ -160,6 +192,11 @@ const PhaseEngine = (() => {
         STEP_OPTIONS,
         PHASE_DAYS_OPTIONS,
         DEFAULT_ROUTINE_STEPS,
+        PROTOCOL_NOTIF_STEPS,
+        protocolNotifStep,
+        EVENING_ROLLOVER_MINUTES,
+        dateAtMinutes,
+        bedTimestamp,
         calculatePhases,
         getPhaseForDate,
         calculateProtocolTimes,

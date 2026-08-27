@@ -57,7 +57,7 @@ const PhaseCalendar = (() => {
             cellsHTML += '<span class="phase-cal__cell phase-cal__cell--empty"></span>';
         }
 
-        const today = TimeUtils.todayISO();
+        const today = App.activeDate();
         for (let d = 1; d <= daysInMonth; d++) {
             const iso = year + '-' +
                 String(month + 1).padStart(2, '0') + '-' +

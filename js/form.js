@@ -173,7 +173,7 @@ const SleepForm = (() => {
         if (!timeValue) return '';
         const hour = parseInt(timeValue.split(':')[0]);
         const date = hour >= 18 ? shiftDateISO(currentDate, -1) : currentDate;
-        return formatDateShort(date);
+        return TimeUtils.formatDateShort(date);
     }
 
     function updateDateHints() {
@@ -318,7 +318,7 @@ const SleepForm = (() => {
         document.getElementById('btn-close-day-main').addEventListener('click', () => {
             if (isReadOnly) return;
             clearTimeout(saveTimer);
-            save().then(() => showCloseDayModal());
+            save().then(() => showCloseDayModal(currentDate));
         });
 
         document.getElementById('tags-disturbances').addEventListener('click', (e) => {
@@ -410,6 +410,42 @@ const SleepForm = (() => {
             updateQuickTimeActive();
             isReadOnly = !!(entry && entry.closed);
             applyReadOnlyState();
+            renderUnclosedBanner();
+        });
+    }
+
+    function isPlannedDate(date) {
+        if (!activePlan || !activePlan.phases || !activePlan.phases.length) return false;
+        const first = activePlan.prepDate || activePlan.phases[0].startDate;
+        const last = activePlan.phases[activePlan.phases.length - 1].endDate;
+        return date >= first && date <= last;
+    }
+
+    // После вечернего перехода закрывать вчерашний день приходится с сегодняшней
+    // страницы — напоминаем о нём здесь, чтобы не искать его стрелками.
+    function renderUnclosedBanner() {
+        const container = document.getElementById('form-view');
+        const existing = container.querySelector('.unclosed-banner');
+        if (existing) existing.remove();
+
+        if (isReadOnly || currentDate !== App.activeDate()) return;
+
+        const prev = shiftDateISO(currentDate, -1);
+        if (!isPlannedDate(prev)) return;
+
+        const forDate = currentDate;
+        DB.getEntry(prev).then(entry => {
+            if (forDate !== currentDate) return;
+            if (entry && entry.closed) return;
+
+            const c = document.getElementById('form-view');
+            if (c.querySelector('.unclosed-banner')) return;
+            c.insertAdjacentHTML('afterbegin',
+                '<div class="readonly-banner unclosed-banner">' +
+                    '<span class="readonly-banner__text">День ' + TimeUtils.formatDateShort(prev) + ' не закрыт</span>' +
+                    '<button class="readonly-banner__btn" id="btn-close-prev-day">Закрыть</button>' +
+                '</div>');
+            c.querySelector('#btn-close-prev-day').addEventListener('click', () => showCloseDayModal(prev));
         });
     }
 
@@ -497,28 +533,48 @@ const SleepForm = (() => {
         setTimeout(() => toast.classList.remove('toast--visible'), 2000);
     }
 
-    function formatDateShort(isoDate) {
-        const [, m, d] = isoDate.split('-');
-        const months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
-        return `${parseInt(d)} ${months[parseInt(m) - 1]}`;
+    function isBlank(value) {
+        return value === null || value === undefined || value === '';
     }
 
-    function showCloseDayModal() {
+    function entryValue(entry, key) {
+        if (key === 'wakeUpsCount') return entry.wakeUps ? entry.wakeUps.count : null;
+        if (key === 'wakeUpsDuration') return entry.wakeUps ? entry.wakeUps.awakeDuration : null;
+        return entry[key];
+    }
+
+    // Для открытой страницы значения берём из формы, для любой другой даты —
+    // из сохранённой записи: иначе закрытие вчерашнего дня прочитало бы
+    // сегодняшние поля и в них же всё и записало.
+    function valuesFor(date) {
+        if (date === currentDate) {
+            const out = {};
+            TRACKER_FIELDS.forEach(f => {
+                out[f.key] = f.inputId ? document.getElementById(f.inputId).value : formState[f.key];
+            });
+            return Promise.resolve(out);
+        }
+        return DB.getEntry(date).then(entry => {
+            const out = {};
+            if (entry) TRACKER_FIELDS.forEach(f => { out[f.key] = entryValue(entry, f.key); });
+            return out;
+        });
+    }
+
+    function showCloseDayModal(targetDate) {
+        const date = targetDate || currentDate;
         const existing = document.querySelector('.close-day-overlay');
         if (existing) existing.remove();
 
-        const missingTracker = TRACKER_FIELDS.filter(f => {
-            if (f.inputId) return !document.getElementById(f.inputId).value;
-            if (f.type === 'rating') return !formState[f.key];
-            return false;
-        });
-
-        Protocol.getIncomplete(currentDate).then(missingProtocol => {
-            renderCloseDayModal(missingTracker, missingProtocol);
+        valuesFor(date).then(values => {
+            const missingTracker = TRACKER_FIELDS.filter(f => isBlank(values[f.key]));
+            return Protocol.getIncomplete(date).then(missingProtocol => {
+                renderCloseDayModal(date, missingTracker, missingProtocol);
+            });
         });
     }
 
-    function renderCloseDayModal(missingTracker, missingProtocol) {
+    function renderCloseDayModal(date, missingTracker, missingProtocol) {
         const allComplete = missingTracker.length === 0 && missingProtocol.length === 0;
 
         let trackerHTML = '';
@@ -575,7 +631,7 @@ const SleepForm = (() => {
         overlay.className = 'close-day-overlay';
         overlay.innerHTML = `
             <div class="close-day-modal">
-                <div class="close-day-modal__title">Закрытие ${formatDateShort(currentDate)}</div>
+                <div class="close-day-modal__title">Закрытие ${TimeUtils.formatDateShort(date)}</div>
                 <div class="close-day-modal__status ${allComplete ? 'close-day-modal__status--ok' : ''}">${statusText}</div>
                 ${trackerHTML}
                 ${protocolHTML}
@@ -592,7 +648,7 @@ const SleepForm = (() => {
             if (e.target === overlay) overlay.remove();
         });
         overlay.querySelector('.btn-later').addEventListener('click', () => overlay.remove());
-        overlay.querySelector('.btn-close-day').addEventListener('click', () => closeDay(overlay));
+        overlay.querySelector('.btn-close-day').addEventListener('click', () => closeDay(overlay, date));
 
         overlay.querySelectorAll('.close-day-rating .rating__btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -602,21 +658,42 @@ const SleepForm = (() => {
         });
     }
 
-    function closeDay(overlay) {
+    function applyToForm(filled) {
+        TRACKER_FIELDS.forEach(f => {
+            if (!(f.key in filled)) return;
+            if (f.inputId) document.getElementById(f.inputId).value = filled[f.key];
+            else formState[f.key] = filled[f.key];
+        });
+        return save();
+    }
+
+    function applyToEntry(date, filled) {
+        return DB.getEntry(date).then(entry => {
+            const data = entry || { date: date, createdAt: Date.now() };
+            Object.keys(filled).forEach(key => {
+                if (key === 'wakeUpsCount' || key === 'wakeUpsDuration') {
+                    data.wakeUps = data.wakeUps || { count: 0, awakeDuration: 0 };
+                    const field = key === 'wakeUpsCount' ? 'count' : 'awakeDuration';
+                    data.wakeUps[field] = parseInt(filled[key]) || 0;
+                } else {
+                    data[key] = filled[key];
+                }
+            });
+            return DB.saveEntry(data);
+        });
+    }
+
+    function closeDay(overlay, targetDate) {
+        const date = targetDate || currentDate;
         clearTimeout(saveTimer);
 
+        const filled = {};
         overlay.querySelectorAll('.close-day-field__input[data-tracker-key]').forEach(input => {
-            if (input.value) {
-                document.getElementById(input.dataset.inputId).value = input.value;
-            }
+            if (input.value) filled[input.dataset.trackerKey] = input.value;
         });
-
         overlay.querySelectorAll('.close-day-rating').forEach(div => {
             const active = div.querySelector('.rating__btn--active');
-            if (active) {
-                const key = div.dataset.trackerKey;
-                formState[key] = parseInt(active.dataset.value);
-            }
+            if (active) filled[div.dataset.trackerKey] = parseInt(active.dataset.value);
         });
 
         const newChecks = {};
@@ -624,12 +701,14 @@ const SleepForm = (() => {
             newChecks[input.dataset.key] = true;
         });
 
-        save().then(() => {
+        const write = date === currentDate ? applyToForm(filled) : applyToEntry(date, filled);
+
+        write.then(() => {
             if (Object.keys(newChecks).length > 0) {
-                return Protocol.saveChecks(currentDate, newChecks);
+                return Protocol.saveChecks(date, newChecks);
             }
         }).then(() => {
-            return DB.getEntry(currentDate);
+            return DB.getEntry(date);
         }).then(entry => {
             if (entry) {
                 entry.closed = true;
@@ -638,7 +717,7 @@ const SleepForm = (() => {
             }
         }).then(() => {
             overlay.remove();
-            App.advanceDate();
+            App.setDate(App.activeDate());
             window.scrollTo({ top: 0, behavior: 'smooth' });
         });
     }

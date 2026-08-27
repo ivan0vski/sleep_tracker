@@ -34,7 +34,7 @@ const Routine = (() => {
             const ctx = PhaseEngine.getDayContext(activePlan, routineSteps, currentDate);
             const mode = getMode();
             const isChecklist = mode === 'checklist';
-            const isPast = currentDate < TimeUtils.todayISO();
+            const isPast = currentDate < App.activeDate();
 
             const checkableItems = ctx.routine.filter(r => !r.step.isFixed);
             const checked = checkableItems.filter(r => progress[r.step.id]).length;

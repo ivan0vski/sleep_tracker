@@ -100,7 +100,7 @@ const Settings = (() => {
                 DB.getActivePlan().then(function (activePlan) {
                     var bed = PhaseEngine.DEFAULTS.targetBed;
                     if (activePlan) {
-                        var phase = PhaseEngine.getPhaseForDate(activePlan.phases, TimeUtils.todayISO());
+                        var phase = PhaseEngine.getPhaseForDate(activePlan.phases, App.activeDate());
                         if (phase) bed = phase.bed;
                     }
                     RoutineEditor.open({
@@ -157,8 +157,8 @@ const Settings = (() => {
             return cfg && cfg.on;
         }).length;
 
-        if (!count) return 'Включены · ни один шаг не выбран';
-        return 'Включены · ' + count + ' ' + plural(count, 'шаг', 'шага', 'шагов');
+        if (!count) return 'Включены · ни один пункт не выбран';
+        return 'Включены · ' + count + ' ' + plural(count, 'пункт', 'пункта', 'пунктов');
     }
 
     function plural(n, one, few, many) {
@@ -196,10 +196,15 @@ const Settings = (() => {
 
         var listHTML = '';
         if (enabled) {
-            listHTML = Notifications.getSteps().map(buildNotifItem).join('');
             listHTML =
                 '<div class="settings__section-title notif-list-title">Шаги распорядка</div>' +
-                '<div class="notif-list">' + listHTML + '</div>' +
+                '<div class="notif-list">' +
+                    Notifications.getRoutineSteps().map(buildNotifItem).join('') +
+                '</div>' +
+                '<div class="settings__section-title notif-list-title">Протокол</div>' +
+                '<div class="notif-list">' +
+                    Notifications.getProtocolSteps().map(buildNotifItem).join('') +
+                '</div>' +
                 '<button class="settings__btn" id="notif-test">Отправить тестовое уведомление</button>';
         }
 
@@ -451,7 +456,7 @@ const Settings = (() => {
     }
 
     function renderPlanDetail(plan) {
-        var today = TimeUtils.todayISO();
+        var today = App.activeDate();
         var phases = plan.phases;
         var currentPhase = PhaseEngine.getPhaseForDate(phases, today);
         var entries = App.getPhaseBarEntries();

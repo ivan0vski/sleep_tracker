@@ -6,8 +6,26 @@ const App = (() => {
     let currentIndex = 0;
     let container = null;
 
+    let lastActiveDate = null;
+
     function isPrepDay() {
         return activePlan && activePlan.prepDate && currentDate === activePlan.prepDate;
+    }
+
+    // Сутки приложения сменяются не в полночь, а за 3 часа до отбоя: вечер уже
+    // относится к ночи, которая помечена завтрашним числом.
+    function activeDate() {
+        const today = TimeUtils.todayISO();
+        const next = TimeUtils.addDays(today, 1);
+
+        // В последний вечер плана не уводим за его пределы.
+        if (activePlan && activePlan.phases && activePlan.phases.length) {
+            if (next > activePlan.phases[activePlan.phases.length - 1].endDate) return today;
+        }
+
+        const bedTs = PhaseEngine.bedTimestamp(activePlan, next);
+        const threshold = bedTs - PhaseEngine.EVENING_ROLLOVER_MINUTES * 60000;
+        return Date.now() >= threshold ? next : today;
     }
 
     function formatDateDisplay(isoDate) {
@@ -19,13 +37,79 @@ const App = (() => {
     function updateDateDisplay() {
         document.getElementById('date-display').textContent = formatDateDisplay(currentDate);
         updateTodayButton();
+        renderDayContext();
     }
 
     function updateTodayButton() {
         const btn = document.getElementById('btn-today');
         if (btn) {
-            btn.classList.toggle('btn-today--hidden', currentDate === TimeUtils.todayISO());
+            btn.classList.toggle('btn-today--hidden', currentDate === activeDate());
         }
+    }
+
+    // Видна только в окно между переходом и полуночью — когда на экране
+    // завтрашнее число, а на дворе ещё сегодняшний вечер.
+    function renderDayContext() {
+        const el = document.getElementById('day-context');
+        if (!el) return;
+
+        const today = TimeUtils.todayISO();
+        if (currentDate !== activeDate() || currentDate === today) {
+            el.textContent = '';
+            el.style.display = 'none';
+            return;
+        }
+
+        const ctx = PhaseEngine.getDayContext(activePlan, null, currentDate);
+        el.style.display = '';
+        el.textContent = '\u{1F319} Вечер ' + TimeUtils.formatDateShort(today) + ' \u00b7 отбой ' + ctx.bed;
+    }
+
+    /* ── Переход суток ── */
+
+    function hideRolloverBanner() {
+        const el = document.getElementById('rollover-banner');
+        if (!el) return;
+        el.innerHTML = '';
+        el.style.display = 'none';
+    }
+
+    function showRolloverBanner(target) {
+        const el = document.getElementById('rollover-banner');
+        if (!el) return;
+        el.innerHTML =
+            '<span class="rollover-banner__text">Наступил вечер \u00b7 страница ' + TimeUtils.formatDateShort(target) + '</span>' +
+            '<button class="rollover-banner__btn" id="btn-rollover-ok">ОК</button>';
+        el.style.display = '';
+        el.querySelector('#btn-rollover-ok').addEventListener('click', () => setDate(activeDate()));
+    }
+
+    // silent = приложение только что открыли или развернули: переходим без вопросов.
+    // Если же оно всё это время было на экране — предлагаем полоской, чтобы
+    // страница не сменилась под пальцами.
+    function checkRollover(silent) {
+        const active = activeDate();
+        if (active === lastActiveDate) return;
+
+        const wasOnActive = currentDate === lastActiveDate;
+        lastActiveDate = active;
+
+        if (!wasOnActive) {
+            updateTodayButton();
+            return;
+        }
+        if (silent) {
+            setDate(active);
+            return;
+        }
+        showRolloverBanner(active);
+    }
+
+    function startRolloverWatch() {
+        setInterval(() => checkRollover(false), 60000);
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) checkRollover(true);
+        });
     }
 
     let phaseBarEntries = {};
@@ -61,7 +145,7 @@ const App = (() => {
 
     function renderPhaseBarSingle(wrap, phase) {
         const phaseDays = daysBetween(phase.startDate, phase.endDate) + 1;
-        const today = TimeUtils.todayISO();
+        const today = activeDate();
         const hasPrepDate = !!activePlan.prepDate;
 
         let cellsHTML = '';
@@ -102,7 +186,7 @@ const App = (() => {
     }
 
     function renderPhaseBarPaginated(wrap, currentPhase) {
-        const today = TimeUtils.todayISO();
+        const today = activeDate();
         const phases = activePlan.phases;
         const PAGE_SIZE = 7;
 
@@ -462,7 +546,7 @@ const App = (() => {
         });
 
         document.getElementById('btn-today').addEventListener('click', () => {
-            setDate(TimeUtils.todayISO());
+            setDate(activeDate());
         });
     }
 
@@ -491,6 +575,10 @@ const App = (() => {
         }).then(() => {
             return loadPhaseBarEntries();
         }).then(() => {
+            // Сутки могли смениться ещё до запуска — считаем дату один раз
+            // и раздаём всем вкладкам, а не даём каждой брать свою.
+            lastActiveDate = activeDate();
+            currentDate = lastActiveDate;
             updateDateDisplay();
             renderPhaseBar();
             renderPhaseLabel();
@@ -501,28 +589,26 @@ const App = (() => {
             Notifications.init(activePlan);
             PushSync.init();
             checkPlanCompletion();
-            SleepForm.render();
-            Protocol.render();
-            Routine.render();
-            Instruction.render();
+            SleepForm.setDate(currentDate);
+            Protocol.setDate(currentDate);
+            Routine.setDate(currentDate);
+            Instruction.setDate(currentDate);
             History.render();
             updateTabVisibility();
             setupTabs();
             setupDateSelector();
             setupPhaseBarClick();
             setupSwipe();
+            startRolloverWatch();
             slideTo(0);
         });
     }
 
     document.addEventListener('DOMContentLoaded', init);
 
-    function advanceDate() {
-        shiftDate(1);
-    }
-
     function setDate(isoDate) {
         currentDate = isoDate;
+        if (isoDate === activeDate()) hideRolloverBanner();
         updateDateDisplay();
         renderPhaseBar();
         renderPhaseLabel();
@@ -587,5 +673,5 @@ const App = (() => {
 
     function getPhaseBarEntries() { return phaseBarEntries; }
 
-    return { switchTab, advanceDate, setDate, refreshPlan, getPhaseBarEntries };
+    return { switchTab, activeDate, setDate, refreshPlan, getPhaseBarEntries };
 })();

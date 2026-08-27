@@ -40,6 +40,13 @@ const TimeUtils = (() => {
             String(d.getDate()).padStart(2, '0');
     }
 
+    function formatDateShort(isoDate) {
+        const [, m, d] = isoDate.split('-');
+        const months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+                        'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+        return `${parseInt(d)} ${months[parseInt(m) - 1]}`;
+    }
+
     function todayISO() {
         const d = new Date();
         return d.getFullYear() + '-' +
@@ -54,6 +61,7 @@ const TimeUtils = (() => {
         diffMinutes,
         formatDuration,
         addDays,
+        formatDateShort,
         todayISO
     };
 })();
