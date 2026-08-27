@@ -12,6 +12,8 @@ const PushSync = (() => {
     const LS_DEVICE = 'pushDeviceId';
     const LS_ENABLED = 'pushEnabled';
     const SYNC_DEBOUNCE_MS = 1500;
+    const NET_RETRIES = 2;
+    const RETRY_DELAY_MS = 600;
 
     let syncTimer = null;
     let lastError = null;
@@ -89,11 +91,26 @@ const PushSync = (() => {
 
     /* ── HTTP ── */
 
+    // Первый запрос из только что развёрнутого приложения на iOS регулярно
+    // отваливается с «Load failed»: сеть ещё не поднялась. Сам запрос при этом
+    // до сервера не доходит, поэтому повтор безопасен — и почти всегда проходит.
+    function wait(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function fetchRetry(url, options, attempt) {
+        const n = attempt || 0;
+        return fetch(url, options).catch(() => {
+            if (n >= NET_RETRIES) throw new Error('Нет связи с сервером');
+            return wait(RETRY_DELAY_MS * (n + 1)).then(() => fetchRetry(url, options, n + 1));
+        });
+    }
+
     function api(path, body) {
         const cfg = getConfig();
         if (!cfg.url) return Promise.reject(new Error('Не задан адрес воркера'));
 
-        return fetch(cfg.url + path, {
+        return fetchRetry(cfg.url + path, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -108,7 +125,7 @@ const PushSync = (() => {
 
     function fetchPublicKey() {
         const cfg = getConfig();
-        return fetch(cfg.url + '/key').then(res => {
+        return fetchRetry(cfg.url + '/key', {}).then(res => {
             if (!res.ok) throw new Error('Воркер не отвечает (HTTP ' + res.status + ')');
             return res.json();
         }).then(data => {

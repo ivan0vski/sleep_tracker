@@ -380,10 +380,15 @@ async function handleRequest(request, env) {
         const rec = await env.PUSH_KV.get(SUB_PREFIX + body.deviceId, 'json');
         if (!rec) return json({ error: 'not registered' }, 404);
         const keys = await getVapid(env);
+        // Без tag и с временем в тексте: одинаковые проверки подряд
+        // push-сервис схлопывает в одну, и кажется, что вторая не дошла.
+        const stamp = new Date().toLocaleTimeString('ru-RU', {
+            hour: '2-digit', minute: '2-digit', second: '2-digit',
+            timeZone: rec.tz || 'UTC'
+        });
         const status = await sendPush(rec.subscription, {
             title: '🔔 Проверка',
-            body: 'Пуши работают',
-            tag: 'test'
+            body: 'Пуши работают · ' + stamp
         }, keys, env);
         return json({ ok: status >= 200 && status < 300, status: status });
     }
