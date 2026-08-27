@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sleep-tracker-v67';
+const CACHE_NAME = 'sleep-tracker-v68';
 const ASSETS = [
     './',
     './index.html',
@@ -29,7 +29,12 @@ self.addEventListener('install', (event) => {
         caches.open(CACHE_NAME)
             .then(cache => Promise.all(
                 ASSETS.map(url =>
-                    fetch(url, { cache: 'no-cache' }).then(res => cache.put(url, res))
+                    fetch(url, { cache: 'no-cache' }).then(res => {
+                        // Класть в кэш 404 нельзя: он переживёт деплой
+                        // и приложение навсегда останется с битым файлом.
+                        if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + url);
+                        return cache.put(url, res);
+                    })
                 )
             ))
             .then(() => self.skipWaiting())
@@ -45,8 +50,24 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+    const req = event.request;
+
+    // Кэш — только для собственных файлов приложения.
+    // Запросы к пуш-воркеру (чужой домен, POST) проходят мимо: перехватывать
+    // их незачем, а сорвавшийся здесь запрос Safari превращает в
+    // «FetchEvent.respondWith received an error» вместо нормальной ошибки сети.
+    if (req.method !== 'GET') return;
+    if (new URL(req.url).origin !== self.location.origin) return;
+
     event.respondWith(
-        caches.match(event.request).then(cached => cached || fetch(event.request))
+        caches.match(req).then(cached => {
+            if (cached) return cached;
+            return fetch(req).catch(() =>
+                // Офлайн и файла нет в кэше: отвечаем пустышкой, а не отказом,
+                // иначе в консоли снова всплывёт ошибка respondWith.
+                new Response('', { status: 504, statusText: 'Offline' })
+            );
+        })
     );
 });
 

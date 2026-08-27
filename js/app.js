@@ -586,8 +586,10 @@ const App = (() => {
             Protocol.setPlan(activePlan);
             Routine.setPlan(activePlan);
             Instruction.setPlan(activePlan);
-            Notifications.init(activePlan);
-            PushSync.init();
+            // Пуши заливаются только после того, как распорядок поднят из базы:
+            // расписание, посчитанное на шагах по умолчанию, затёрло бы на
+            // сервере настоящее.
+            Notifications.init(activePlan).then(() => PushSync.init());
             checkPlanCompletion();
             SleepForm.setDate(currentDate);
             Protocol.setDate(currentDate);
