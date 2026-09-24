@@ -75,6 +75,49 @@ const PhaseEngine = (() => {
         return phases;
     }
 
+    // Повтор фазы носит номер той фазы, которую повторяет, поэтому
+    // номер не уникален — подпись берём отсюда, чтобы она была одинаковой везде.
+    function phaseName(phase) {
+        return 'Фаза ' + phase.number + (phase.repeat ? ' · повтор' : '');
+    }
+
+    function daysInPhase(phase) {
+        const a = new Date(phase.startDate + 'T12:00:00');
+        const b = new Date(phase.endDate + 'T12:00:00');
+        return Math.round((b - a) / 86400000) + 1;
+    }
+
+    // Продление: фаза, идущая в dateStr, уступает свои дни повтору предыдущей,
+    // а сама вместе со всеми следующими уезжает вперёд на свою длину.
+    // Возвращает новый список фаз; исходный не меняется. null — продлевать нечего.
+    function extendPreviousPhase(phases, dateStr) {
+        if (!phases || !phases.length) return null;
+        const current = getPhaseForDate(phases, dateStr);
+        const idx = current ? phases.indexOf(current) : -1;
+        if (idx < 1) return null;
+
+        const prev = phases[idx - 1];
+        const shift = daysInPhase(current);
+
+        const repeat = {
+            number: prev.number,
+            wake: prev.wake,
+            bed: prev.bed,
+            startDate: current.startDate,
+            endDate: current.endDate,
+            color: prev.color,
+            repeat: true
+        };
+
+        const moved = phases.slice(idx).map(p => Object.assign({}, p, {
+            startDate: TimeUtils.addDays(p.startDate, shift),
+            endDate: TimeUtils.addDays(p.endDate, shift)
+        }));
+
+        return phases.slice(0, idx).map(p => Object.assign({}, p))
+            .concat([repeat], moved);
+    }
+
     // Абсолютное время 00:00 указанной даты плюс minutes.
     function dateAtMinutes(isoDate, minutes) {
         const p = isoDate.split('-');
@@ -199,6 +242,8 @@ const PhaseEngine = (() => {
         bedTimestamp,
         calculatePhases,
         getPhaseForDate,
+        phaseName,
+        extendPreviousPhase,
         calculateProtocolTimes,
         calculateRoutineTimes,
         getDayContext

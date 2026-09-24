@@ -326,7 +326,7 @@ const Notifications = (() => {
             for (let i = from; i < Math.min(from + 2, plan.phases.length); i++) {
                 const p = plan.phases[i];
                 rows.push({
-                    label: 'Фаза ' + p.number + ' (с ' + formatDateRu(p.startDate) + ')',
+                    label: PhaseEngine.phaseName(p) + ' (с ' + formatDateRu(p.startDate) + ')',
                     time: notifTimeForDate(step, p.startDate, cfg.lead)
                 });
             }

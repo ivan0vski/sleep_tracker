@@ -24,6 +24,11 @@ const Settings = (() => {
                 statusHTML = '<div class="settings__status"><div class="settings__status-line">Нет активного плана</div></div>';
             }
 
+            // Продлевать есть что, только когда идёт вторая фаза или дальше.
+            var extendBtn = plan && PhaseEngine.extendPreviousPhase(plan.phases, App.activeDate())
+                ? '<button class="settings__btn" id="settings-extend">Продлить прошлую фазу</button>'
+                : '';
+
             var resetBtn = plan
                 ? '<button class="settings__btn settings__btn--danger" id="settings-reset">Сбросить план</button>'
                 : '';
@@ -48,6 +53,7 @@ const Settings = (() => {
                         '<div class="settings__section-title">Режим сна</div>' +
                         statusHTML +
                         planBtn +
+                        extendBtn +
                         '<button class="settings__btn" id="settings-new-plan">Новый план</button>' +
                         '<button class="settings__btn" id="settings-routine">Вечерний распорядок</button>' +
                         routineModeHTML +
@@ -79,6 +85,13 @@ const Settings = (() => {
         if (planDetailBtn && plan) {
             planDetailBtn.addEventListener('click', function () {
                 renderPlanDetail(plan);
+            });
+        }
+
+        var extendBtn = overlay.querySelector('#settings-extend');
+        if (extendBtn && plan) {
+            extendBtn.addEventListener('click', function () {
+                renderExtend(plan);
             });
         }
 
@@ -458,7 +471,6 @@ const Settings = (() => {
     function renderPlanDetail(plan) {
         var today = App.activeDate();
         var phases = plan.phases;
-        var currentPhase = PhaseEngine.getPhaseForDate(phases, today);
         var entries = App.getPhaseBarEntries();
 
         var totalDays = daysSpan(phases[0].startDate, phases[phases.length - 1].endDate);
@@ -507,9 +519,26 @@ const Settings = (() => {
                 : '') +
             '</div>';
 
-        var phasesHTML = phases.map(function (p) {
+        overlay.querySelector('.settings-panel').innerHTML =
+            '<div class="settings__header">' +
+                '<button class="settings__close" id="plan-detail-back">&larr;</button>' +
+                '<span class="settings__title">Текущий план</span>' +
+            '</div>' +
+            summaryHTML +
+            '<div class="plan-detail__phases">' + buildPhasesHTML(phases, today, entries) + '</div>';
+
+        overlay.querySelector('#plan-detail-back').addEventListener('click', function () {
+            renderContent();
+        });
+    }
+
+    function buildPhasesHTML(phases, today, entries) {
+        var currentPhase = PhaseEngine.getPhaseForDate(phases, today);
+
+        return phases.map(function (p) {
             var pDays = daysSpan(p.startDate, p.endDate);
-            var isCurrent = currentPhase && currentPhase.number === p.number;
+            // У повтора тот же номер, что у оригинала, — сравниваем саму фазу.
+            var isCurrent = currentPhase === p;
 
             var cellsHTML = '';
             for (var d = 0; d < pDays; d++) {
@@ -537,24 +566,61 @@ const Settings = (() => {
             return '<div class="plan-detail__phase' + (isCurrent ? ' plan-detail__phase--current' : '') + '">' +
                 '<div class="plan-detail__phase-header">' +
                     '<span class="plan-detail__phase-dot" style="background:' + p.color + '"></span>' +
-                    '<span class="plan-detail__phase-name">Фаза ' + p.number + '</span>' +
+                    '<span class="plan-detail__phase-name">' + PhaseEngine.phaseName(p) + '</span>' +
                     '<span class="plan-detail__phase-times">подъём ' + p.wake + ' · отбой ' + p.bed + '</span>' +
                 '</div>' +
                 '<div class="plan-detail__phase-dates">' + formatDateShort(p.startDate) + ' — ' + formatDateShort(p.endDate) + '</div>' +
                 '<div class="plan-detail__cells">' + cellsHTML + '</div>' +
             '</div>';
         }).join('');
+    }
+
+    /* ── Продление фазы ── */
+
+    var EXTEND_WORD = 'продлить';
+
+    function renderExtend(plan) {
+        var today = App.activeDate();
+        var newPhases = PhaseEngine.extendPreviousPhase(plan.phases, today);
+        if (!newPhases) { renderContent(); return; }
+
+        var current = PhaseEngine.getPhaseForDate(plan.phases, today);
+        var prev = plan.phases[plan.phases.indexOf(current) - 1];
 
         overlay.querySelector('.settings-panel').innerHTML =
             '<div class="settings__header">' +
-                '<button class="settings__close" id="plan-detail-back">&larr;</button>' +
-                '<span class="settings__title">Текущий план</span>' +
+                '<button class="settings__close" id="extend-back">&larr;</button>' +
+                '<span class="settings__title">Продлить прошлую фазу?</span>' +
             '</div>' +
-            summaryHTML +
-            '<div class="plan-detail__phases">' + phasesHTML + '</div>';
+            '<div class="notif-hint">' +
+                PhaseEngine.phaseName(current) + ' (подъём ' + current.wake + ') сдвинется вперёд, ' +
+                'вместо неё ещё раз пройдёт ' + PhaseEngine.phaseName(prev) + ' (подъём ' + prev.wake + '). ' +
+                'Так будет выглядеть план:' +
+            '</div>' +
+            '<div class="plan-detail__phases">' + buildPhasesHTML(newPhases, today, App.getPhaseBarEntries()) + '</div>' +
+            '<div class="push-field">' +
+                '<label>Для подтверждения впиши «' + EXTEND_WORD + '»</label>' +
+                '<input type="text" id="extend-input" class="push-input" autocomplete="off" autocapitalize="off">' +
+            '</div>' +
+            '<button class="settings__btn" id="extend-confirm" disabled>Продлить</button>';
 
-        overlay.querySelector('#plan-detail-back').addEventListener('click', function () {
-            renderContent();
+        overlay.querySelector('#extend-back').addEventListener('click', renderContent);
+
+        var input = overlay.querySelector('#extend-input');
+        var confirmBtn = overlay.querySelector('#extend-confirm');
+        input.addEventListener('input', function () {
+            confirmBtn.disabled = input.value.trim().toLowerCase() !== EXTEND_WORD;
+        });
+
+        confirmBtn.addEventListener('click', function () {
+            if (input.value.trim().toLowerCase() !== EXTEND_WORD) return;
+            confirmBtn.disabled = true;
+            var updated = Object.assign({}, plan, { phases: newPhases });
+            DB.savePlan(updated).then(function () {
+                return App.refreshPlan();
+            }).then(function () {
+                if (overlay) renderPlanDetail(updated);
+            });
         });
     }
 

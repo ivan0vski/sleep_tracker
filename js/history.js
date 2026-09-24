@@ -24,7 +24,7 @@ const History = (() => {
         const phaseInfo = getPhaseInfo(entry.date, plan);
         const hitHTML = buildHitIndicator(entry, phaseInfo);
         const phaseBadge = phaseInfo
-            ? `<span class="history-item__phase" style="color:${phaseInfo.phase.color}">фаза ${phaseInfo.phase.number} день ${phaseInfo.dayInPhase}</span>`
+            ? `<span class="history-item__phase" style="color:${phaseInfo.phase.color}">фаза ${phaseInfo.phase.number}${phaseInfo.phase.repeat ? ' повтор' : ''} день ${phaseInfo.dayInPhase}</span>`
             : '';
 
         let feelingText = '';

@@ -291,7 +291,7 @@ const App = (() => {
         el.style.display = '';
         el.innerHTML = `
             <span class="phase-label__dot" style="background:${phase.color}"></span>
-            <span class="phase-label__text">Фаза ${phase.number} · день ${dayInPhase} · подъём ${phase.wake} · отбой ${phase.bed}</span>
+            <span class="phase-label__text">${PhaseEngine.phaseName(phase)} · день ${dayInPhase} · подъём ${phase.wake} · отбой ${phase.bed}</span>
         `;
     }
 
