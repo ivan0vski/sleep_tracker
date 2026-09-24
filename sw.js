@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sleep-tracker-v71';
+const CACHE_NAME = 'sleep-tracker-v72';
 const ASSETS = [
     './',
     './index.html',
@@ -47,6 +47,14 @@ self.addEventListener('activate', (event) => {
             Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
         ).then(() => self.clients.claim())
     );
+});
+
+// Страница спрашивает версию у воркера, который ею управляет: это версия
+// файлов, реально работающих на телефоне, а не той, что лежит на сайте.
+self.addEventListener('message', (event) => {
+    if (event.data === 'getVersion' && event.ports[0]) {
+        event.ports[0].postMessage(CACHE_NAME);
+    }
 });
 
 self.addEventListener('fetch', (event) => {

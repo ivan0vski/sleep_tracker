@@ -670,11 +670,33 @@ const Settings = (() => {
         return parseInt(parts[2]) + '.' + parts[1];
     }
 
+    function showVersion(text) {
+        var m = text && String(text).match(/sleep-tracker-(v\d+)/);
+        var el = overlay && overlay.querySelector('#settings-version');
+        if (m && el) el.textContent = 'Версия: ' + m[1];
+        return !!m;
+    }
+
+    // Версию того кода, что сейчас работает, знает управляющий воркер.
+    function askWorkerVersion() {
+        var ctrl = navigator.serviceWorker && navigator.serviceWorker.controller;
+        if (!ctrl) return Promise.resolve(null);
+        return new Promise(function (resolve) {
+            var channel = new MessageChannel();
+            var timer = setTimeout(function () { resolve(null); }, 1000);
+            channel.port1.onmessage = function (e) {
+                clearTimeout(timer);
+                resolve(e.data);
+            };
+            ctrl.postMessage('getVersion', [channel.port2]);
+        });
+    }
+
     function loadVersion() {
-        fetch('./sw.js').then(function (r) { return r.text(); }).then(function (text) {
-            var m = text.match(/sleep-tracker-(v\d+)/);
-            var el = overlay && overlay.querySelector('#settings-version');
-            if (m && el) el.textContent = 'Версия: ' + m[1];
+        askWorkerVersion().then(function (version) {
+            if (showVersion(version)) return;
+            // Воркера ещё нет или он старый и не умеет отвечать — берём с сайта.
+            return fetch('./sw.js').then(function (r) { return r.text(); }).then(showVersion);
         }).catch(function () {});
     }
 
