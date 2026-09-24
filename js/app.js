@@ -146,7 +146,8 @@ const App = (() => {
     function renderPhaseBarSingle(wrap, phase) {
         const phaseDays = daysBetween(phase.startDate, phase.endDate) + 1;
         const today = activeDate();
-        const hasPrepDate = !!activePlan.prepDate;
+        // День подготовки стоит перед первой фазой — на остальных фазах он лишний.
+        const hasPrepDate = !!activePlan.prepDate && phase === activePlan.phases[0];
 
         let cellsHTML = '';
 
