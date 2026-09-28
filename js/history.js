@@ -1,11 +1,29 @@
 const History = (() => {
 
     let activePlan = null;
+    // Записи с последней отрисовки: экспорт собирает файл из них сразу по нажатию,
+    // без похода в базу — иначе iOS сочтёт вызов «Поделиться» не пользовательским.
+    let loadedEntries = [];
+
+    // Порядок и названия колонок протокола в таблице.
+    const PROTOCOL_COLUMNS = [
+        ['morningTracker', 'Утренний трекер'],
+        ['morningLight', 'Утренний свет'],
+        ['caffeineBeforeNoon', 'Кофеин вовремя'],
+        ['noDaytimeSleep', 'Без дневного сна'],
+        ['exerciseBefore17', 'Тренировка вовремя'],
+        ['screensOff', 'Экраны выключены'],
+        ['lastMeal', 'Ужин вовремя'],
+        ['noPhysicalLoad', 'Без нагрузки вечером'],
+        ['warmShower', 'Тёплый душ'],
+        ['toiletBeforeBed', 'Туалет перед сном']
+    ];
 
     function render() {
         const container = document.getElementById('history-view');
         Promise.all([DB.getAllEntries(), DB.getActivePlan()]).then(([entries, plan]) => {
             activePlan = plan;
+            loadedEntries = entries;
             if (entries.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
@@ -15,7 +33,9 @@ const History = (() => {
                 `;
                 return;
             }
-            container.innerHTML = `<div class="history-list">${entries.map(e => renderItem(e, plan)).join('')}</div>`;
+            container.innerHTML =
+                '<button class="history-export" id="btn-history-export">Экспорт в таблицу</button>' +
+                `<div class="history-list">${entries.map(e => renderItem(e, plan)).join('')}</div>`;
             bindEvents(container);
         });
     }
@@ -70,11 +90,15 @@ const History = (() => {
         return { phase, dayInPhase };
     }
 
-    function buildHitIndicator(entry, phaseInfo) {
-        if (!phaseInfo || !entry.finalWakeTime) return '';
+    function isWakeHit(entry, phaseInfo) {
         const diff = Math.abs(TimeUtils.diffMinutes(entry.finalWakeTime, phaseInfo.phase.wake));
         const cross = diff > 720 ? 1440 - diff : diff;
-        if (cross <= 15) {
+        return cross <= 15;
+    }
+
+    function buildHitIndicator(entry, phaseInfo) {
+        if (!phaseInfo || !entry.finalWakeTime) return '';
+        if (isWakeHit(entry, phaseInfo)) {
             return '<span class="history-item__hit history-item__hit--ok">✓</span>';
         }
         return '<span class="history-item__hit history-item__hit--fail">✕</span>';
@@ -123,7 +147,109 @@ const History = (() => {
         return `${parseInt(d)} ${months[parseInt(m) - 1]}, ${days[date.getDay()]}`;
     }
 
+    /* ── Экспорт ── */
+
+    function buildCsvRow(entry) {
+        const phaseInfo = getPhaseInfo(entry.date, activePlan);
+        let hit = '';
+        if (phaseInfo && entry.finalWakeTime) {
+            hit = isWakeHit(entry, phaseInfo) ? 'да' : 'нет';
+        }
+
+        const sleepMinutes = entry.fallAsleepTime && entry.finalWakeTime
+            ? TimeUtils.diffMinutes(entry.finalWakeTime, entry.fallAsleepTime)
+            : '';
+
+        // Старые записи хранят одну общую оценку самочувствия вместо двух —
+        // форма при открытии так же подставляет её в оба поля.
+        const legacy = !entry.daytimeMental && !entry.daytimePhysical ? entry.daytimeFeeling : null;
+        const wakeUps = entry.wakeUps || {};
+        const protocol = entry.protocol;
+
+        return [
+            entry.date,
+            phaseInfo ? PhaseEngine.phaseName(phaseInfo.phase) : '',
+            phaseInfo ? phaseInfo.dayInPhase : '',
+            phaseInfo ? phaseInfo.phase.wake : '',
+            hit,
+            entry.bedTime,
+            entry.fallAsleepTime,
+            wakeUps.count,
+            wakeUps.awakeDuration,
+            entry.finalWakeTime,
+            entry.outOfBedTime,
+            TimeUtils.formatDuration(entry.fallAsleepTime, entry.finalWakeTime),
+            sleepMinutes,
+            entry.sleepQuality,
+            entry.daytimeMental || legacy,
+            entry.daytimePhysical || legacy,
+            (entry.disturbances || []).join(', '),
+            (entry.yesterdayFactors || []).join(', '),
+            protocol ? Object.values(protocol).filter(Boolean).length : '',
+            ...PROTOCOL_COLUMNS.map(([key]) => protocol ? (protocol[key] ? 'да' : 'нет') : ''),
+            entry.closed ? 'да' : 'нет'
+        ];
+    }
+
+    function csvCell(value) {
+        if (value === null || value === undefined) return '';
+        let s = String(value);
+        // Свой тег, начинающийся с «=», «+», «-» или «@», таблица приняла бы за формулу.
+        if (/^[=+\-@]/.test(s)) s = "'" + s;
+        if (/[";\r\n]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
+        return s;
+    }
+
+    function buildCsv(entries) {
+        const header = [
+            'Дата', 'Фаза', 'День фазы', 'Цель подъёма', 'Подъём в цель',
+            'Лёг', 'Заснул', 'Просыпался, раз', 'Без сна, мин', 'Проснулся', 'Встал',
+            'Сон', 'Сон, мин', 'Качество сна', 'Душевное', 'Физическое',
+            'Мешало', 'Факторы', 'Протокол, выполнено',
+            ...PROTOCOL_COLUMNS.map(([, title]) => title),
+            'День закрыт'
+        ];
+        // В таблице удобнее идти от старых ночей к новым.
+        const rows = entries.slice().sort((a, b) => a.date.localeCompare(b.date)).map(buildCsvRow);
+        // Точка с запятой и метка кодировки в начале — чтобы русский Excel
+        // сам разложил колонки и не превратил кириллицу в кракозябры.
+        return '﻿' + [header, ...rows].map(r => r.map(csvCell).join(';')).join('\r\n') + '\r\n';
+    }
+
+    function downloadFile(file) {
+        const url = URL.createObjectURL(file);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = file.name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+    }
+
+    function exportHistory() {
+        if (!loadedEntries.length) return;
+        const name = 'sleep-history-' + TimeUtils.todayISO() + '.csv';
+        const file = new File([buildCsv(loadedEntries)], name, { type: 'text/csv' });
+
+        // На телефоне — через меню «Поделиться» (сохранить в Файлы, отправить себе):
+        // в приложении с экрана «Домой» обычное скачивание на iOS не работает.
+        // На компьютере файл просто скачивается.
+        const isTouch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+        if (isTouch && navigator.canShare && navigator.canShare({ files: [file] })) {
+            navigator.share({ files: [file], title: name }).catch(err => {
+                if (err && err.name === 'AbortError') return;
+                downloadFile(file);
+            });
+            return;
+        }
+        downloadFile(file);
+    }
+
     function bindEvents(container) {
+        const exportBtn = container.querySelector('#btn-history-export');
+        if (exportBtn) exportBtn.addEventListener('click', exportHistory);
+
         container.querySelectorAll('.history-item').forEach(item => {
             item.addEventListener('click', (e) => {
                 if (e.target.closest('.btn-edit') || e.target.closest('.btn-delete')) return;

@@ -504,6 +504,25 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 
 /* History */
+.history-export {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--accent-dim);
+    border-radius: var(--radius);
+    color: var(--accent-light);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: var(--transition);
+}
+
+.history-export:active {
+    background: var(--accent-dim);
+}
+
 .history-list {
     display: flex;
     flex-direction: column;
