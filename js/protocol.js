@@ -5,7 +5,7 @@ const Protocol = (() => {
     let activePlan = null;
 
     const ALL_KEYS = [
-        'morningTracker', 'morningLight', 'morningExercise', 'caffeineBeforeNoon',
+        'caffeineBeforeNoon',
         'noDaytimeSleep', 'exerciseBefore17', 'screensOff',
         'lastMeal', 'noPhysicalLoad', 'warmShower', 'toiletBeforeBed'
     ];
@@ -14,7 +14,10 @@ const Protocol = (() => {
     const ARCHIVE = [
         'Таймер днём — напоминание, сколько осталось до сна',
         'Уставать днём максимально сильно',
-        'Меньше часа до сна — не пить вообще'
+        'Меньше часа до сна — не пить вообще',
+        'Заполнить утренний трекер — перенесено в утренний распорядок',
+        'Выход на улицу — минимум 15 мин в первые 30 мин после подъёма — перенесено в утренний распорядок',
+        '1 физ. упражнение, чтобы поднять пульс — перенесено в утренний распорядок'
     ];
 
     function getContext() {
@@ -37,9 +40,7 @@ const Protocol = (() => {
                 title: `☀️ Подъём — ${wake}`,
                 items: [
                     { type: 'hint', text: 'Подъём по времени приложения, 7 дней в неделю. Будильник не переносить' },
-                    { type: 'check', key: 'morningTracker', label: 'Заполнить утренний трекер' },
-                    { type: 'check', key: 'morningLight', label: 'Выход на улицу — минимум 15 мин в первые 30 мин после подъёма' },
-                    { type: 'check', key: 'morningExercise', label: '1 физ. упражнение, чтобы поднять пульс, — в первые 30 мин после подъёма' }
+                    { type: 'hint', text: 'Утренние шаги — на вкладке «Распорядок»' }
                 ]
             },
             {

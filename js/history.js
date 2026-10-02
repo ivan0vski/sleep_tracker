@@ -7,9 +7,6 @@ const History = (() => {
 
     // Порядок и названия колонок протокола в таблице.
     const PROTOCOL_COLUMNS = [
-        ['morningTracker', 'Утренний трекер'],
-        ['morningLight', 'Утренний свет'],
-        ['morningExercise', 'Утреннее упражнение'],
         ['caffeineBeforeNoon', 'Кофеин вовремя'],
         ['noDaytimeSleep', 'Без дневного сна'],
         ['exerciseBefore17', 'Тренировка вовремя'],
@@ -19,6 +16,12 @@ const History = (() => {
         ['warmShower', 'Тёплый душ'],
         ['toiletBeforeBed', 'Туалет перед сном']
     ];
+
+    // Считаем только текущие пункты: в старых записях остались отметки
+    // убранных из протокола пунктов (утренний трекер, свет, упражнение).
+    function protocolDone(protocol) {
+        return PROTOCOL_COLUMNS.filter(([key]) => protocol[key]).length;
+    }
 
     function render() {
         const container = document.getElementById('history-view');
@@ -138,7 +141,7 @@ const History = (() => {
         if (entry.daytimePhysical) lines.push(`Физическое: ${entry.daytimePhysical}/5`);
         if (!entry.daytimeMental && !entry.daytimePhysical && entry.daytimeFeeling) lines.push(`Самочувствие: ${entry.daytimeFeeling}/5`);
         if (entry.protocol) {
-            const done = Object.values(entry.protocol).filter(Boolean).length;
+            const done = protocolDone(entry.protocol);
             lines.push(`Протокол: ${done}/${PROTOCOL_COLUMNS.length} выполнено`);
         }
         return lines.map(l => `<div>${l}</div>`).join('');
@@ -188,7 +191,7 @@ const History = (() => {
             entry.daytimePhysical || legacy,
             (entry.disturbances || []).join(', '),
             (entry.yesterdayFactors || []).join(', '),
-            protocol ? Object.values(protocol).filter(Boolean).length : '',
+            protocol ? protocolDone(protocol) : '',
             ...PROTOCOL_COLUMNS.map(([key]) => protocol ? (protocol[key] ? 'да' : 'нет') : ''),
             entry.closed ? 'да' : 'нет'
         ];
