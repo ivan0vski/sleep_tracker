@@ -9,6 +9,7 @@ const History = (() => {
     const PROTOCOL_COLUMNS = [
         ['morningTracker', 'Утренний трекер'],
         ['morningLight', 'Утренний свет'],
+        ['morningExercise', 'Утреннее упражнение'],
         ['caffeineBeforeNoon', 'Кофеин вовремя'],
         ['noDaytimeSleep', 'Без дневного сна'],
         ['exerciseBefore17', 'Тренировка вовремя'],
@@ -138,7 +139,7 @@ const History = (() => {
         if (!entry.daytimeMental && !entry.daytimePhysical && entry.daytimeFeeling) lines.push(`Самочувствие: ${entry.daytimeFeeling}/5`);
         if (entry.protocol) {
             const done = Object.values(entry.protocol).filter(Boolean).length;
-            lines.push(`Протокол: ${done}/10 выполнено`);
+            lines.push(`Протокол: ${done}/${PROTOCOL_COLUMNS.length} выполнено`);
         }
         return lines.map(l => `<div>${l}</div>`).join('');
     }

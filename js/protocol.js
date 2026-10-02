@@ -5,9 +5,16 @@ const Protocol = (() => {
     let activePlan = null;
 
     const ALL_KEYS = [
-        'morningTracker', 'morningLight', 'caffeineBeforeNoon',
+        'morningTracker', 'morningLight', 'morningExercise', 'caffeineBeforeNoon',
         'noDaytimeSleep', 'exerciseBefore17', 'screensOff',
         'lastMeal', 'noPhysicalLoad', 'warmShower', 'toiletBeforeBed'
+    ];
+
+    // Пункты, убранные из протокола. Показываются в настройках → «Архив протокола».
+    const ARCHIVE = [
+        'Таймер днём — напоминание, сколько осталось до сна',
+        'Уставать днём максимально сильно',
+        'Меньше часа до сна — не пить вообще'
     ];
 
     function getContext() {
@@ -19,20 +26,20 @@ const Protocol = (() => {
         const wake = ctx.wake;
         const bed = ctx.bed;
         const wakePlus30 = TimeUtils.addMinutes(wake, 30);
-        const afternoonReminder = TimeUtils.addMinutes(wake, 540);
         const goHomeNotify = TimeUtils.addMinutes(bed, PhaseEngine.protocolNotifStep('proto_go_home').offsetMinutes);
         const taxiTime = TimeUtils.addMinutes(bed, -160);
         const homeBy = TimeUtils.addMinutes(bed, -130);
-        const dimLights = TimeUtils.addMinutes(bed, -70);
+        const dimLights = TimeUtils.addMinutes(bed, -135);
 
         return [
             {
                 id: 'morning',
                 title: `☀️ Подъём — ${wake}`,
                 items: [
-                    { type: 'hint', text: `Подъём в ${wake}, 7 дней в неделю. Будильник не переносить` },
+                    { type: 'hint', text: 'Подъём по времени приложения, 7 дней в неделю. Будильник не переносить' },
                     { type: 'check', key: 'morningTracker', label: 'Заполнить утренний трекер' },
-                    { type: 'check', key: 'morningLight', label: 'Выход на яркий уличный свет — 10–20 мин в первые 60 мин после подъёма' }
+                    { type: 'check', key: 'morningLight', label: 'Выход на улицу — минимум 15 мин в первые 30 мин после подъёма' },
+                    { type: 'check', key: 'morningExercise', label: '1 физ. упражнение, чтобы поднять пульс, — в первые 30 мин после подъёма' }
                 ]
             },
             {
@@ -48,9 +55,7 @@ const Protocol = (() => {
                 title: `🕐 День — ${p.caffeineUntil}–${p.trainingUntil}`,
                 items: [
                     { type: 'check', key: 'noDaytimeSleep', label: 'Никакого дневного сна' },
-                    { type: 'hint', text: `Таймер в ${afternoonReminder} — напоминание, сколько осталось до сна` },
                     { type: 'hint', text: `70–80% дневной нормы воды выпить до ${p.trainingUntil}` },
-                    { type: 'hint', text: 'Уставать днём максимально сильно' },
                     { type: 'check', key: 'exerciseBefore17', label: `интенсивные тренировки до ${p.trainingUntil}` }
                 ]
             },
@@ -59,6 +64,7 @@ const Protocol = (() => {
                 title: `🏠 Вечер: переход — ${p.trainingUntil}–${p.screensOff}`,
                 items: [
                     { type: 'hint', text: `Уведомление ${goHomeNotify} «ехать домой». В ${taxiTime} — такси. Дома к ${homeBy}` },
+                    { type: 'hint', text: `После ${dimLights} — приглушённый свет тёплого спектра (1800–2200 K)` },
                     { type: 'check', key: 'screensOff', label: `Экраны выключить к ${p.screensOff}` },
                     { type: 'check', key: 'lastMeal', label: `Последний приём пищи не позже ${p.lastMeal}` },
                     { type: 'hint', text: 'не больше 200 мл воды после ужина' }
@@ -68,13 +74,11 @@ const Protocol = (() => {
                 id: 'bedPrep',
                 title: `🌙 Подготовка ко сну — ${p.screensOff}–${bed}`,
                 items: [
-                    { type: 'hint', text: `После ${dimLights} — приглушённый свет тёплого спектра (1800–2200 K)` },
                     { type: 'check', key: 'noPhysicalLoad', label: 'Никакой физической нагрузки, умственная — минимум' },
                     { type: 'check', key: 'warmShower', label: 'Тёплый (не горячий) душ' },
                     { type: 'hint', text: 'Проветрить комнату, довести до 18,3 °C' },
                     { type: 'hint', text: 'Абсолютная темнота: блэкаут-шторы, заклеить LED техники, убрать свет из коридора' },
                     { type: 'hint', text: 'Тишина, шумоизоляция' },
-                    { type: 'hint', text: 'Меньше часа до сна — не пить вообще' },
                     { type: 'check', key: 'toiletBeforeBed', label: 'Туалет перед укладыванием' }
                 ]
             }
@@ -88,7 +92,8 @@ const Protocol = (() => {
                 lines: [
                     `В кровати ровно в ${ctx.bed}. Не раньше`,
                     'Выбрал позу — не двигаться',
-                    'Не пытаться заснуть. Просто чилить, не заснул — ладно'
+                    'Не пытаться заснуть. Просто чилить, не заснул — ладно',
+                    'Если 20 минут не сплю — встал, пошёл читать книгу'
                 ]
             },
             {
@@ -287,5 +292,5 @@ const Protocol = (() => {
         });
     }
 
-    return { render, setDate, setPlan, getIncomplete, saveChecks };
+    return { ARCHIVE, render, setDate, setPlan, getIncomplete, saveChecks };
 })();

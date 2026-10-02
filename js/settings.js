@@ -60,6 +60,10 @@ const Settings = (() => {
                         resetBtn +
                     '</div>' +
                     '<div class="settings__section">' +
+                        '<div class="settings__section-title">Протокол</div>' +
+                        '<button class="settings__btn" id="settings-protocol-archive">🗄 Архив протокола</button>' +
+                    '</div>' +
+                    '<div class="settings__section">' +
                         '<div class="settings__section-title">Уведомления</div>' +
                         '<button class="settings__btn" id="settings-notifications">' +
                             '🔔 Напоминания о распорядке' +
@@ -131,6 +135,10 @@ const Settings = (() => {
             });
         });
 
+        overlay.querySelector('#settings-protocol-archive').addEventListener('click', function () {
+            renderProtocolArchive();
+        });
+
         overlay.querySelector('#settings-notifications').addEventListener('click', function () {
             renderNotifications();
         });
@@ -155,6 +163,24 @@ const Settings = (() => {
                 }
             });
         }
+    }
+
+    /* ── Архив протокола ── */
+
+    function renderProtocolArchive() {
+        var itemsHTML = Protocol.ARCHIVE.map(function (text) {
+            return '<div class="protocol-hint">' + text + '</div>';
+        }).join('');
+
+        overlay.querySelector('.settings-panel').innerHTML =
+            '<div class="settings__header">' +
+                '<button class="settings__close" id="archive-back">&larr;</button>' +
+                '<span class="settings__title">Архив протокола</span>' +
+            '</div>' +
+            '<div class="notif-hint">Пункты, убранные из протокола.</div>' +
+            '<div class="protocol-section">' + itemsHTML + '</div>';
+
+        overlay.querySelector('#archive-back').addEventListener('click', renderContent);
     }
 
     /* ── Notifications ── */

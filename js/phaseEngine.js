@@ -145,7 +145,7 @@ const PhaseEngine = (() => {
             caffeineUntil: TimeUtils.addMinutes(wake, 360),
             trainingUntil: TimeUtils.addMinutes(bed, -240),
             screensOff: TimeUtils.addMinutes(bed, -120),
-            lastMeal: TimeUtils.addMinutes(bed, -140),
+            lastMeal: TimeUtils.addMinutes(bed, -110),
             noExercise: TimeUtils.addMinutes(bed, -120),
             shower: TimeUtils.addMinutes(bed, -75),
             toilet: TimeUtils.addMinutes(bed, -10)
