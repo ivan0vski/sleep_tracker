@@ -226,8 +226,9 @@ const SleepForm = (() => {
     function updateSleepDuration() {
         const fallAsleep = document.getElementById('q-fallasleep').value;
         const finalWake = document.getElementById('q-finalwake').value;
+        const awake = parseInt(document.getElementById('q-wakeups-duration').value) || 0;
         const el = document.getElementById('sleep-duration');
-        const dur = TimeUtils.formatDuration(fallAsleep, finalWake);
+        const dur = TimeUtils.formatDuration(fallAsleep, finalWake, awake);
         el.textContent = dur ? `Сон: ${dur}` : '';
     }
 
@@ -235,7 +236,7 @@ const SleepForm = (() => {
         document.querySelectorAll('#form-view input[type="time"], #form-view input[type="number"]').forEach(input => {
             input.addEventListener('change', () => {
                 scheduleAutoSave();
-                if (input.id === 'q-fallasleep' || input.id === 'q-finalwake') {
+                if (input.id === 'q-fallasleep' || input.id === 'q-finalwake' || input.id === 'q-wakeups-duration') {
                     updateSleepDuration();
                 }
                 if (input.id === 'q-bedtime' || input.id === 'q-fallasleep') {
@@ -250,6 +251,10 @@ const SleepForm = (() => {
                 }
             });
         });
+
+        // Число вводится с клавиатуры, а «change» придёт только при уходе из поля —
+        // пересчитываем сон сразу по мере набора.
+        document.getElementById('q-wakeups-duration').addEventListener('input', updateSleepDuration);
 
         document.getElementById('rating-quality').addEventListener('click', (e) => {
             if (isReadOnly) return;

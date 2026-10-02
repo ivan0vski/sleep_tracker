@@ -104,11 +104,15 @@ const History = (() => {
         return '<span class="history-item__hit history-item__hit--fail">✕</span>';
     }
 
+    function awakeMinutes(entry) {
+        return entry.wakeUps ? entry.wakeUps.awakeDuration : 0;
+    }
+
     function buildSummary(entry) {
         const parts = [];
         if (entry.fallAsleepTime && entry.finalWakeTime) {
             let timeRange = `${entry.fallAsleepTime} → ${entry.finalWakeTime}`;
-            const dur = TimeUtils.formatDuration(entry.fallAsleepTime, entry.finalWakeTime);
+            const dur = TimeUtils.formatDuration(entry.fallAsleepTime, entry.finalWakeTime, awakeMinutes(entry));
             if (dur) timeRange += ` (${dur})`;
             parts.push(timeRange);
         }
@@ -124,7 +128,7 @@ const History = (() => {
         }
         if (entry.finalWakeTime) lines.push(`Проснулся: ${entry.finalWakeTime}`);
         if (entry.outOfBedTime) lines.push(`Встал: ${entry.outOfBedTime}`);
-        const dur = TimeUtils.formatDuration(entry.fallAsleepTime, entry.finalWakeTime);
+        const dur = TimeUtils.formatDuration(entry.fallAsleepTime, entry.finalWakeTime, awakeMinutes(entry));
         if (dur) lines.push(`Сон: ${dur}`);
         if (entry.sleepQuality) lines.push(`Качество сна: ${entry.sleepQuality}/5`);
         if (entry.disturbances && entry.disturbances.length) lines.push(`Мешало: ${entry.disturbances.join(', ')}`);
@@ -156,9 +160,7 @@ const History = (() => {
             hit = isWakeHit(entry, phaseInfo) ? 'да' : 'нет';
         }
 
-        const sleepMinutes = entry.fallAsleepTime && entry.finalWakeTime
-            ? TimeUtils.diffMinutes(entry.finalWakeTime, entry.fallAsleepTime)
-            : '';
+        const sleepMinutes = TimeUtils.sleepMinutes(entry.fallAsleepTime, entry.finalWakeTime, awakeMinutes(entry));
 
         // Старые записи хранят одну общую оценку самочувствия вместо двух —
         // форма при открытии так же подставляет её в оба поля.
@@ -178,7 +180,7 @@ const History = (() => {
             wakeUps.awakeDuration,
             entry.finalWakeTime,
             entry.outOfBedTime,
-            TimeUtils.formatDuration(entry.fallAsleepTime, entry.finalWakeTime),
+            TimeUtils.formatDuration(entry.fallAsleepTime, entry.finalWakeTime, awakeMinutes(entry)),
             sleepMinutes,
             entry.sleepQuality,
             entry.daytimeMental || legacy,

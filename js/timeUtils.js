@@ -24,9 +24,15 @@ const TimeUtils = (() => {
         return diff;
     }
 
-    function formatDuration(fallAsleep, finalWake) {
+    // Чистый сон: интервал «заснул → проснулся» минус минуты без сна за ночь.
+    function sleepMinutes(fallAsleep, finalWake, awakeMinutes) {
         if (!fallAsleep || !finalWake) return null;
-        const mins = diffMinutes(finalWake, fallAsleep);
+        return Math.max(0, diffMinutes(finalWake, fallAsleep) - (awakeMinutes || 0));
+    }
+
+    function formatDuration(fallAsleep, finalWake, awakeMinutes) {
+        const mins = sleepMinutes(fallAsleep, finalWake, awakeMinutes);
+        if (mins === null) return null;
         const h = Math.floor(mins / 60);
         const m = mins % 60;
         return m > 0 ? `${h}ч ${m}мин` : `${h}ч`;
@@ -59,6 +65,7 @@ const TimeUtils = (() => {
         formatTime,
         addMinutes,
         diffMinutes,
+        sleepMinutes,
         formatDuration,
         addDays,
         formatDateShort,
