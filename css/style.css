@@ -448,6 +448,40 @@ input[type="number"]::-webkit-outer-spin-button {
     justify-content: center;
 }
 
+/* Day comment */
+.day-comment {
+    display: block;
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--bg-input);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 16px;
+    font-family: inherit;
+    line-height: 1.4;
+    outline: none;
+    resize: none;
+    overflow: hidden;
+    transition: border-color var(--transition);
+    -webkit-appearance: none;
+}
+
+.day-comment:focus {
+    border-color: var(--accent);
+}
+
+.day-comment::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.6;
+}
+
+/* Safari бледнит текст неактивного поля — в закрытом дне его не прочитать */
+.day-comment:disabled {
+    opacity: 1;
+    -webkit-text-fill-color: var(--text-primary);
+}
+
 /* Save button */
 .btn-save {
     width: 100%;
@@ -594,6 +628,15 @@ input[type="number"]::-webkit-outer-spin-button {
 
 .history-item--expanded .history-item__details {
     display: block;
+}
+
+.history-item__comment {
+    margin-top: 8px;
+    padding-left: 10px;
+    border-left: 2px solid var(--accent);
+    color: var(--text-secondary);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
 }
 
 .history-item__actions {
@@ -1153,6 +1196,7 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 
 .form-view--readonly input,
+.form-view--readonly textarea,
 .form-view--readonly .rating__btn,
 .form-view--readonly .tag {
     pointer-events: none;

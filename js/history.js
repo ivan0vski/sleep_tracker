@@ -144,7 +144,20 @@ const History = (() => {
             const done = protocolDone(entry.protocol);
             lines.push(`Протокол: ${done}/${PROTOCOL_COLUMNS.length} выполнено`);
         }
-        return lines.map(l => `<div>${l}</div>`).join('');
+        let html = lines.map(l => `<div>${l}</div>`).join('');
+        if (entry.dayComment) {
+            html += `<div class="history-item__comment">${escapeHTML(entry.dayComment)}</div>`;
+        }
+        return html;
+    }
+
+    // Комментарий — свободный текст: без экранирования «<» в нём сломал бы разметку.
+    function escapeHTML(s) {
+        return String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
     }
 
     function formatDate(isoDate) {
@@ -193,7 +206,8 @@ const History = (() => {
             (entry.yesterdayFactors || []).join(', '),
             protocol ? protocolDone(protocol) : '',
             ...PROTOCOL_COLUMNS.map(([key]) => protocol ? (protocol[key] ? 'да' : 'нет') : ''),
-            entry.closed ? 'да' : 'нет'
+            entry.closed ? 'да' : 'нет',
+            entry.dayComment
         ];
     }
 
@@ -213,7 +227,7 @@ const History = (() => {
             'Сон', 'Сон, мин', 'Качество сна', 'Душевное', 'Физическое',
             'Мешало', 'Факторы', 'Протокол, выполнено',
             ...PROTOCOL_COLUMNS.map(([, title]) => title),
-            'День закрыт'
+            'День закрыт', 'Комментарий'
         ];
         // В таблице удобнее идти от старых ночей к новым.
         const rows = entries.slice().sort((a, b) => a.date.localeCompare(b.date)).map(buildCsvRow);

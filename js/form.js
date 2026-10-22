@@ -137,6 +137,10 @@ const SleepForm = (() => {
                 </div>
             </div>
             <div class="card">
+                <div class="card__title">Комментарий по дню</div>
+                <textarea class="day-comment" id="q-day-comment" rows="3" placeholder="Как прошёл день, что повлияло на самочувствие…"></textarea>
+            </div>
+            <div class="card">
                 <div class="card__title">Самочувствие днём</div>
                 <div class="card__label">Душевное</div>
                 <div class="rating" id="rating-daytime-mental">
@@ -220,7 +224,33 @@ const SleepForm = (() => {
     function scheduleAutoSave() {
         if (isReadOnly) return;
         clearTimeout(saveTimer);
-        saveTimer = setTimeout(save, 500);
+        saveTimer = setTimeout(() => { saveTimer = null; save(); }, 500);
+    }
+
+    function cancelAutoSave() {
+        clearTimeout(saveTimer);
+        saveTimer = null;
+    }
+
+    // Отложенное сохранение не должно пропасть, если дату сменили
+    // или приложение свернули раньше, чем сработал таймер.
+    function flushAutoSave() {
+        if (!saveTimer) return;
+        cancelAutoSave();
+        save();
+    }
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) flushAutoSave();
+    });
+
+    // Окошко растёт вместе с текстом: в закрытом дне поле неактивно
+    // и прокрутить его нельзя — комментарий должен быть виден целиком.
+    function resizeComment() {
+        const el = document.getElementById('q-day-comment');
+        if (!el) return;
+        el.style.height = 'auto';
+        el.style.height = (el.scrollHeight + el.offsetHeight - el.clientHeight) + 'px';
     }
 
     function updateSleepDuration() {
@@ -255,6 +285,12 @@ const SleepForm = (() => {
         // Число вводится с клавиатуры, а «change» придёт только при уходе из поля —
         // пересчитываем сон сразу по мере набора.
         document.getElementById('q-wakeups-duration').addEventListener('input', updateSleepDuration);
+
+        // Текст набирается долго — сохраняем по ходу набора, а не по уходу из поля.
+        document.getElementById('q-day-comment').addEventListener('input', () => {
+            resizeComment();
+            scheduleAutoSave();
+        });
 
         document.getElementById('rating-quality').addEventListener('click', (e) => {
             if (isReadOnly) return;
@@ -322,7 +358,7 @@ const SleepForm = (() => {
 
         document.getElementById('btn-close-day-main').addEventListener('click', () => {
             if (isReadOnly) return;
-            clearTimeout(saveTimer);
+            cancelAutoSave();
             save().then(() => showCloseDayModal(currentDate));
         });
 
@@ -394,6 +430,7 @@ const SleepForm = (() => {
                 document.getElementById('q-wakeups-duration').value = entry.wakeUps ? entry.wakeUps.awakeDuration : '';
                 document.getElementById('q-finalwake').value = entry.finalWakeTime || '';
                 document.getElementById('q-outofbed').value = entry.outOfBedTime || '';
+                document.getElementById('q-day-comment').value = entry.dayComment || '';
                 updateRating('rating-quality', entry.sleepQuality);
                 if (entry.daytimeMental || entry.daytimePhysical) {
                     updateRating('rating-daytime-mental', entry.daytimeMental);
@@ -413,6 +450,7 @@ const SleepForm = (() => {
             updateDateHints();
             updateHitIndicators();
             updateQuickTimeActive();
+            resizeComment();
             isReadOnly = !!(entry && entry.closed);
             applyReadOnlyState();
             renderUnclosedBanner();
@@ -460,7 +498,7 @@ const SleepForm = (() => {
 
         if (isReadOnly) {
             container.classList.add('form-view--readonly');
-            container.querySelectorAll('input').forEach(i => i.disabled = true);
+            container.querySelectorAll('input, textarea').forEach(i => i.disabled = true);
             if (!existingBanner) {
                 container.insertAdjacentHTML('afterbegin', `
                     <div class="readonly-banner">
@@ -472,7 +510,7 @@ const SleepForm = (() => {
             }
         } else {
             container.classList.remove('form-view--readonly');
-            container.querySelectorAll('input').forEach(i => i.disabled = false);
+            container.querySelectorAll('input, textarea').forEach(i => i.disabled = false);
             if (existingBanner) existingBanner.remove();
         }
     }
@@ -504,26 +542,30 @@ const SleepForm = (() => {
     }
 
     function save() {
-        return DB.getEntry(currentDate).then(existing => {
-            const entry = {
-                date: currentDate,
-                bedTime: document.getElementById('q-bedtime').value || null,
-                fallAsleepTime: document.getElementById('q-fallasleep').value || null,
-                wakeUps: {
-                    count: parseInt(document.getElementById('q-wakeups-count').value) || 0,
-                    awakeDuration: parseInt(document.getElementById('q-wakeups-duration').value) || 0
-                },
-                finalWakeTime: document.getElementById('q-finalwake').value || null,
-                outOfBedTime: document.getElementById('q-outofbed').value || null,
-                sleepQuality: formState.sleepQuality || null,
-                disturbances: formState.disturbances || [],
-                customDisturbances: formState.customDisturbances || [],
-                yesterdayFactors: formState.yesterdayFactors || [],
-                customFactors: formState.customFactors || [],
-                daytimeMental: formState.daytimeMental || null,
-                daytimePhysical: formState.daytimePhysical || null,
-                createdAt: (existing && existing.createdAt) || Date.now()
-            };
+        // Поля снимаем сразу, а не после чтения из базы: к тому моменту
+        // на экране может быть уже другая дата.
+        const date = currentDate;
+        const entry = {
+            date: date,
+            bedTime: document.getElementById('q-bedtime').value || null,
+            fallAsleepTime: document.getElementById('q-fallasleep').value || null,
+            wakeUps: {
+                count: parseInt(document.getElementById('q-wakeups-count').value) || 0,
+                awakeDuration: parseInt(document.getElementById('q-wakeups-duration').value) || 0
+            },
+            finalWakeTime: document.getElementById('q-finalwake').value || null,
+            outOfBedTime: document.getElementById('q-outofbed').value || null,
+            sleepQuality: formState.sleepQuality || null,
+            disturbances: formState.disturbances || [],
+            customDisturbances: formState.customDisturbances || [],
+            yesterdayFactors: formState.yesterdayFactors || [],
+            customFactors: formState.customFactors || [],
+            dayComment: document.getElementById('q-day-comment').value.trim() || null,
+            daytimeMental: formState.daytimeMental || null,
+            daytimePhysical: formState.daytimePhysical || null
+        };
+        return DB.getEntry(date).then(existing => {
+            entry.createdAt = (existing && existing.createdAt) || Date.now();
             if (existing && existing.protocol) {
                 entry.protocol = existing.protocol;
             }
@@ -690,7 +732,7 @@ const SleepForm = (() => {
 
     function closeDay(overlay, targetDate) {
         const date = targetDate || currentDate;
-        clearTimeout(saveTimer);
+        cancelAutoSave();
 
         const filled = {};
         overlay.querySelectorAll('.close-day-field__input[data-tracker-key]').forEach(input => {
@@ -728,6 +770,7 @@ const SleepForm = (() => {
     }
 
     function setDate(isoDate) {
+        flushAutoSave();
         currentDate = isoDate;
         formState = {};
         isReadOnly = false;
