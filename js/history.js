@@ -7,6 +7,7 @@ const History = (() => {
 
     // Порядок и названия колонок протокола в таблице.
     const PROTOCOL_COLUMNS = [
+        ['outdoorAfterWake', 'Выход на улицу'],
         ['caffeineBeforeNoon', 'Кофеин вовремя'],
         ['noDaytimeSleep', 'Без дневного сна'],
         ['exerciseBefore17', 'Тренировка вовремя'],

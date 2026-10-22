@@ -13,7 +13,7 @@ const Routine = (() => {
         { id: 'morning_teeth',    emoji: '🪥', name: 'Чистить зубы' },
         { id: 'morning_exercise', emoji: '🏃', name: 'Физическое упражнение — поднять пульс' },
         { id: 'morning_window',   emoji: '🪟', name: 'Открыть окно' },
-        { id: 'morning_walk',     emoji: '🚶', name: 'Прогулка — минимум 15 минут' },
+        { id: 'morning_walk',     emoji: '🚶', name: 'Прогулка' },
         { id: 'morning_bed',      emoji: '🛏', name: 'Заправить кровать' },
         { id: 'morning_prayer',   emoji: '🙏', name: 'Молитва' },
         { id: 'morning_meal',     emoji: '🍳', name: 'Завтрак' },

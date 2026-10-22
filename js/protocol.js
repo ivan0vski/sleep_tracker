@@ -5,7 +5,7 @@ const Protocol = (() => {
     let activePlan = null;
 
     const ALL_KEYS = [
-        'caffeineBeforeNoon',
+        'outdoorAfterWake', 'caffeineBeforeNoon',
         'noDaytimeSleep', 'exerciseBefore17', 'screensOff',
         'lastMeal', 'noPhysicalLoad', 'warmShower', 'toiletBeforeBed'
     ];
@@ -16,7 +16,6 @@ const Protocol = (() => {
         'Уставать днём максимально сильно',
         'Меньше часа до сна — не пить вообще',
         'Заполнить утренний трекер — перенесено в утренний распорядок',
-        'Выход на улицу — минимум 15 мин в первые 30 мин после подъёма — перенесено в утренний распорядок',
         '1 физ. упражнение, чтобы поднять пульс — перенесено в утренний распорядок'
     ];
 
@@ -29,6 +28,7 @@ const Protocol = (() => {
         const wake = ctx.wake;
         const bed = ctx.bed;
         const wakePlus30 = TimeUtils.addMinutes(wake, 30);
+        const wakePlus60 = TimeUtils.addMinutes(wake, 60);
         const goHomeNotify = TimeUtils.addMinutes(bed, PhaseEngine.protocolNotifStep('proto_go_home').offsetMinutes);
         const taxiTime = TimeUtils.addMinutes(bed, -160);
         const homeBy = TimeUtils.addMinutes(bed, -130);
@@ -40,6 +40,7 @@ const Protocol = (() => {
                 title: `☀️ Подъём — ${wake}`,
                 items: [
                     { type: 'hint', text: 'Подъём по времени приложения, 7 дней в неделю. Будильник не переносить' },
+                    { type: 'check', key: 'outdoorAfterWake', label: `Выход на улицу на 30 минут — в течение часа после подъёма, до ${wakePlus60}` },
                     { type: 'hint', text: 'Утренние шаги — на вкладке «Распорядок»' }
                 ]
             },
