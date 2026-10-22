@@ -137,7 +137,11 @@ const History = (() => {
         if (dur) lines.push(`Сон: ${dur}`);
         if (entry.sleepQuality) lines.push(`Качество сна: ${entry.sleepQuality}/5`);
         if (entry.disturbances && entry.disturbances.length) lines.push(`Мешало: ${entry.disturbances.join(', ')}`);
-        if (entry.yesterdayFactors && entry.yesterdayFactors.length) lines.push(`Факторы: ${entry.yesterdayFactors.join(', ')}`);
+        if (entry.yesterdayFactors && entry.yesterdayFactors.length) {
+            const labels = {};
+            SleepForm.factorTags(entry.date).forEach(t => { labels[t.value] = t.label; });
+            lines.push(`Вчера: ${entry.yesterdayFactors.map(v => labels[v] || v).join(', ')}`);
+        }
         if (entry.daytimeMental) lines.push(`Душевное: ${entry.daytimeMental}/5`);
         if (entry.daytimePhysical) lines.push(`Физическое: ${entry.daytimePhysical}/5`);
         if (!entry.daytimeMental && !entry.daytimePhysical && entry.daytimeFeeling) lines.push(`Самочувствие: ${entry.daytimeFeeling}/5`);

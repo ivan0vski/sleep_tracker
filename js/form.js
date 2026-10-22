@@ -4,8 +4,7 @@ const SleepForm = (() => {
     let isReadOnly = false;
     let activePlan = null;
 
-    const DISTURBANCE_TAGS = ['шум', 'свет', 'температура', 'тревога', 'боль', 'партнёр', 'другое'];
-    const FACTOR_TAGS = ['кофеин', 'алкоголь', 'спорт', 'экран', 'стресс', 'тяжёлая еда', 'другое'];
+    const DISTURBANCE_TAGS = ['шум', 'свет', 'жарко', 'холодно', 'тревога', 'боль', 'партнёр'];
 
     const TRACKER_FIELDS = [
         { key: 'bedTime', label: 'Во сколько лёг в кровать', inputId: 'q-bedtime', type: 'time' },
@@ -18,6 +17,27 @@ const SleepForm = (() => {
         { key: 'daytimeMental', label: 'Самочувствие — душевное', type: 'rating' },
         { key: 'daytimePhysical', label: 'Самочувствие — физическое', type: 'rating' }
     ];
+
+    // «Вчера» — день перед ночью, записанной на странице date. Кофеин считается
+    // от вчерашнего подъёма, вечерние границы — от отбоя этой ночи: он помечен
+    // датой страницы. В записи хранится value, а время в подписи идёт за фазой.
+    function factorTags(date) {
+        const dayBefore = PhaseEngine.getDayContext(activePlan, null, shiftDateISO(date, -1));
+        const night = PhaseEngine.getDayContext(activePlan, null, date);
+        const beforeBed = (minutes) => TimeUtils.addMinutes(night.bed, -minutes);
+        return [
+            { value: 'кофеин', label: 'кофеин после ' + dayBefore.protocol.caffeineUntil },
+            { value: 'дневной сон', label: 'дневной сон' },
+            { value: 'спорт', label: 'спорт после ' + night.protocol.trainingUntil },
+            { value: 'яркий свет', label: 'яркий свет после ' + beforeBed(135) },
+            { value: 'экран', label: 'экран после ' + night.protocol.screensOff },
+            { value: 'тяжёлая еда', label: 'тяжёлая еда после ' + beforeBed(90) },
+            { value: 'вода после ужина', label: 'вода после ужина >200 мл' },
+            { value: 'алкоголь', label: 'алкоголь' },
+            { value: 'стресс', label: 'стресс' },
+            { value: 'лекарства', label: 'лекарства' }
+        ];
+    }
 
     function getPhaseForCurrentDate() {
         if (!activePlan || !activePlan.phases || !activePlan.phases.length) return null;
@@ -127,9 +147,9 @@ const SleepForm = (() => {
                 </div>
             </div>
             <div class="card">
-                <div class="card__title">Вчера: кофеин / нагрузка / факторы</div>
+                <div class="card__title">Вчера</div>
                 <div class="tags" id="tags-factors">
-                    ${renderTags(FACTOR_TAGS, formState.yesterdayFactors || [], formState.customFactors)}
+                    ${renderTags(factorTags(currentDate), formState.yesterdayFactors || [], formState.customFactors)}
                 </div>
                 <div class="tag-custom">
                     <input type="text" class="tag-custom__input" id="custom-factor" placeholder="Своё...">
@@ -157,11 +177,18 @@ const SleepForm = (() => {
         loadExisting();
     }
 
+    // Тег — строка или { value, label }. Отмеченные теги, которых больше нет
+    // в списке (убранные «другое», «температура» в старых записях), тоже показываем — иначе их не снять.
     function renderTags(predefined, active, customs) {
-        customs = customs || [];
-        const allTags = [...new Set([...predefined, ...customs])];
-        return allTags.map(tag =>
-            `<span class="tag ${active.includes(tag) ? 'tag--active' : ''}" data-tag="${tag}">${tag}</span>`
+        const tags = predefined.map(t => typeof t === 'string' ? { value: t, label: t } : t);
+        const known = tags.map(t => t.value);
+        [...(customs || []), ...active].forEach(value => {
+            if (known.includes(value)) return;
+            known.push(value);
+            tags.push({ value: value, label: value });
+        });
+        return tags.map(t =>
+            `<span class="tag ${active.includes(t.value) ? 'tag--active' : ''}" data-tag="${t.value}">${t.label}</span>`
         ).join('');
     }
 
@@ -386,7 +413,7 @@ const SleepForm = (() => {
 
         document.getElementById('add-factor').addEventListener('click', () => {
             if (isReadOnly) return;
-            addCustomTag('yesterdayFactors', 'customFactors', 'custom-factor', 'tags-factors', FACTOR_TAGS);
+            addCustomTag('yesterdayFactors', 'customFactors', 'custom-factor', 'tags-factors', factorTags(currentDate));
             scheduleAutoSave();
         });
     }
@@ -442,7 +469,7 @@ const SleepForm = (() => {
                     updateRating('rating-daytime-physical', entry.daytimeFeeling);
                 }
                 updateTags('tags-disturbances', DISTURBANCE_TAGS, entry.disturbances || [], entry.customDisturbances || []);
-                updateTags('tags-factors', FACTOR_TAGS, entry.yesterdayFactors || [], entry.customFactors || []);
+                updateTags('tags-factors', factorTags(currentDate), entry.yesterdayFactors || [], entry.customFactors || []);
             } else {
                 formState = {};
             }
@@ -781,5 +808,5 @@ const SleepForm = (() => {
         activePlan = plan;
     }
 
-    return { render, setDate, setPlan };
+    return { render, setDate, setPlan, factorTags };
 })();
