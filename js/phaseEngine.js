@@ -41,6 +41,60 @@ const PhaseEngine = (() => {
         return PROTOCOL_NOTIF_STEPS.find(s => s.id === id) || null;
     }
 
+    // Стандартный режим — подъём и отбой, когда активного плана нет.
+    // Лежит в localStorage, а не в IndexedDB: getDayContext синхронный.
+    const LS_STANDARD = 'standardTimes';
+    const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+    const STANDARD_SLEEP_MIN_HOURS = 4;
+    const STANDARD_SLEEP_MAX_HOURS = 12;
+    let standardCache = null;
+
+    // null — всё в порядке, иначе текст ошибки для экрана настроек.
+    // Ночь короче 4 или длиннее 12 часов ломает порог смены суток
+    // (он считается от отбоя назад), поэтому такие пары не принимаем.
+    function validateStandardTimes(wake, bed) {
+        if (!TIME_RE.test(wake || '') || !TIME_RE.test(bed || '')) {
+            return 'Укажи время подъёма и отбоя';
+        }
+        const sleep = TimeUtils.diffMinutes(wake, bed);
+        if (sleep < STANDARD_SLEEP_MIN_HOURS * 60 || sleep > STANDARD_SLEEP_MAX_HOURS * 60) {
+            return 'Между отбоем и подъёмом должно быть от ' +
+                STANDARD_SLEEP_MIN_HOURS + ' до ' + STANDARD_SLEEP_MAX_HOURS + ' часов';
+        }
+        return null;
+    }
+
+    function getStandardTimes() {
+        if (!standardCache) {
+            standardCache = { wake: DEFAULTS.targetWake, bed: DEFAULTS.targetBed };
+            try {
+                const s = JSON.parse(localStorage.getItem(LS_STANDARD));
+                if (s && validateStandardTimes(s.wake, s.bed) === null) {
+                    standardCache = { wake: s.wake, bed: s.bed };
+                }
+            } catch (e) {}
+        }
+        return { wake: standardCache.wake, bed: standardCache.bed };
+    }
+
+    // Возвращает null при успехе или текст ошибки.
+    function setStandardTimes(wake, bed) {
+        const err = validateStandardTimes(wake, bed);
+        if (err) return err;
+        try {
+            localStorage.setItem(LS_STANDARD, JSON.stringify({ wake: wake, bed: bed }));
+        } catch (e) {
+            return 'Не удалось сохранить';
+        }
+        standardCache = { wake: wake, bed: bed };
+        return null;
+    }
+
+    function resetStandardTimes() {
+        try { localStorage.removeItem(LS_STANDARD); } catch (e) {}
+        standardCache = null;
+    }
+
     function calculatePhases(config) {
         const { currentWake, targetWake, desiredSleepHours, stepMinutes, phaseDays, startDate } = config;
 
@@ -168,10 +222,11 @@ const PhaseEngine = (() => {
         const steps = routineSteps || DEFAULT_ROUTINE_STEPS;
 
         if (!plan || plan.status !== 'active') {
-            const wake = (plan && plan.targetWake) || DEFAULTS.targetWake;
+            const standard = getStandardTimes();
+            const wake = (plan && plan.targetWake) || standard.wake;
             const bed = (plan && plan.targetWake)
                 ? TimeUtils.addMinutes(wake, -(plan.desiredSleepHours || DEFAULTS.desiredSleepHours) * 60)
-                : DEFAULTS.targetBed;
+                : standard.bed;
 
             return {
                 date: dateStr,
@@ -237,6 +292,10 @@ const PhaseEngine = (() => {
         DEFAULT_ROUTINE_STEPS,
         PROTOCOL_NOTIF_STEPS,
         protocolNotifStep,
+        getStandardTimes,
+        setStandardTimes,
+        resetStandardTimes,
+        validateStandardTimes,
         EVENING_ROLLOVER_MINUTES,
         dateAtMinutes,
         bedTimestamp,

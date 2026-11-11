@@ -33,6 +33,13 @@ const Settings = (() => {
                 ? '<button class="settings__btn settings__btn--danger" id="settings-reset">Сбросить план</button>'
                 : '';
 
+            var std = PhaseEngine.getStandardTimes();
+            var standardBtn =
+                '<button class="settings__btn" id="settings-standard">' +
+                    '⏰ Стандартный режим' +
+                    '<span class="settings__btn-sub">подъём ' + std.wake + ' · отбой ' + std.bed + '</span>' +
+                '</button>';
+
             var routineMode = Routine.getMode();
             var routineModeHTML =
                 '<div class="settings__toggle-row">' +
@@ -54,6 +61,7 @@ const Settings = (() => {
                         statusHTML +
                         planBtn +
                         extendBtn +
+                        standardBtn +
                         '<button class="settings__btn" id="settings-new-plan">Новый план</button>' +
                         '<button class="settings__btn" id="settings-routine">Вечерний распорядок</button>' +
                         routineModeHTML +
@@ -99,6 +107,10 @@ const Settings = (() => {
             });
         }
 
+        overlay.querySelector('#settings-standard').addEventListener('click', function () {
+            renderStandard(plan);
+        });
+
         overlay.querySelector('#settings-new-plan').addEventListener('click', function () {
             var input = prompt('Для создания нового плана введите "новый план":');
             if (input && input.trim().toLowerCase() === 'новый план') {
@@ -115,7 +127,7 @@ const Settings = (() => {
             DB.getRoutineSteps().then(function (steps) {
                 var useSteps = steps.length ? steps : PhaseEngine.DEFAULT_ROUTINE_STEPS;
                 DB.getActivePlan().then(function (activePlan) {
-                    var bed = PhaseEngine.DEFAULTS.targetBed;
+                    var bed = PhaseEngine.getStandardTimes().bed;
                     if (activePlan) {
                         var phase = PhaseEngine.getPhaseForDate(activePlan.phases, App.activeDate());
                         if (phase) bed = phase.bed;
@@ -163,6 +175,78 @@ const Settings = (() => {
                 }
             });
         }
+    }
+
+    /* ── Стандартный режим ── */
+
+    function renderStandard(plan) {
+        var std = PhaseEngine.getStandardTimes();
+        var def = PhaseEngine.DEFAULTS;
+
+        var hint = 'Подъём и отбой, когда нет активного плана. От них считаются протокол, ' +
+            'вечерний распорядок, напоминания и вечерняя смена суток.';
+        if (plan) hint += ' Сейчас идёт план — пока он не закончится, действуют времена фаз.';
+
+        overlay.querySelector('.settings-panel').innerHTML =
+            '<div class="settings__header">' +
+                '<button class="settings__close" id="standard-back">&larr;</button>' +
+                '<span class="settings__title">Стандартный режим</span>' +
+            '</div>' +
+            '<div class="notif-hint">' + hint + '</div>' +
+            '<div class="push-field">' +
+                '<label for="standard-wake">Подъём</label>' +
+                '<input type="time" id="standard-wake" value="' + std.wake + '">' +
+            '</div>' +
+            '<div class="push-field">' +
+                '<label for="standard-bed">Отбой</label>' +
+                '<input type="time" id="standard-bed" value="' + std.bed + '">' +
+            '</div>' +
+            '<div class="push-status" id="standard-status"></div>' +
+            '<button class="settings__btn" id="standard-save">Сохранить</button>' +
+            '<button class="settings__btn" id="standard-reset">Вернуть ' + def.targetWake + ' / ' + def.targetBed + '</button>';
+
+        var wakeInput = overlay.querySelector('#standard-wake');
+        var bedInput = overlay.querySelector('#standard-bed');
+        var statusEl = overlay.querySelector('#standard-status');
+        var saveBtn = overlay.querySelector('#standard-save');
+
+        function updateStatus() {
+            var err = PhaseEngine.validateStandardTimes(wakeInput.value, bedInput.value);
+            statusEl.classList.toggle('push-status--err', !!err);
+            statusEl.textContent = err ||
+                ('Сон: ' + TimeUtils.formatDuration(bedInput.value, wakeInput.value, 0));
+            saveBtn.disabled = !!err;
+        }
+
+        function applied() {
+            // Время пересчитывается и для напоминаний, и для пушей на сервере.
+            Notifications.reschedule();
+            App.refreshDay();
+            renderContent();
+        }
+
+        ['input', 'change'].forEach(function (ev) {
+            wakeInput.addEventListener(ev, updateStatus);
+            bedInput.addEventListener(ev, updateStatus);
+        });
+        updateStatus();
+
+        overlay.querySelector('#standard-back').addEventListener('click', renderContent);
+
+        saveBtn.addEventListener('click', function () {
+            var err = PhaseEngine.setStandardTimes(wakeInput.value, bedInput.value);
+            if (err) {
+                statusEl.classList.add('push-status--err');
+                statusEl.textContent = err;
+                return;
+            }
+            applied();
+        });
+
+        overlay.querySelector('#standard-reset').addEventListener('click', function () {
+            PhaseEngine.resetStandardTimes();
+            applied();
+        });
     }
 
     /* ── Архив протокола ── */

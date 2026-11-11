@@ -676,5 +676,12 @@ const App = (() => {
 
     function getPhaseBarEntries() { return phaseBarEntries; }
 
-    return { switchTab, activeDate, setDate, refreshPlan, getPhaseBarEntries };
+    // Поменялся стандартный режим: времена на всех вкладках считаются от него,
+    // а порог смены суток — от отбоя. Перерисовываем открытую дату и сверяем сутки.
+    function refreshDay() {
+        setDate(currentDate);
+        checkRollover(false);
+    }
+
+    return { switchTab, activeDate, setDate, refreshPlan, refreshDay, getPhaseBarEntries };
 })();

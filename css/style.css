@@ -2556,6 +2556,10 @@ input[type="number"]::-webkit-outer-spin-button {
     min-height: 20px;
 }
 
+.push-status--err {
+    color: #EF4444;
+}
+
 [data-theme="light"] .push-checks {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
